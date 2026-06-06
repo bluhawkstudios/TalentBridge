@@ -383,6 +383,29 @@ const elements = {
   
   // System Settings Page Controls
   adminSettingsClearBtn: document.getElementById("admin-settings-clear-btn"),
+  
+  // Recruiter Layout & Workspace Elements
+  recruiterLayoutWrapper: document.getElementById("recruiter-layout-wrapper"),
+  recruiterSidebarAvatarCircle: document.getElementById("recruiter-sidebar-avatar-circle"),
+  recruiterSidebarName: document.getElementById("recruiter-sidebar-name"),
+  recruiterSidebarLogoutBtn: document.getElementById("recruiter-sidebar-logout-btn"),
+  recruiterSidebarThemeToggle: document.getElementById("recruiter-sidebar-theme-toggle"),
+  recruiterDashboardView: document.getElementById("recruiter-dashboard-view"),
+  recruiterCandidatesView: document.getElementById("recruiter-candidates-view"),
+  recruiterStatusTimelineView: document.getElementById("recruiter-status-timeline-view"),
+  recruiterCountAssigned: document.getElementById("recruiter-count-assigned"),
+  recruiterCountActive: document.getElementById("recruiter-count-active"),
+  recruiterCountJoined: document.getElementById("recruiter-count-joined"),
+  recruiterCountRejected: document.getElementById("recruiter-count-rejected"),
+  recruiterActivityLogs: document.getElementById("recruiter-activity-logs"),
+  recruiterCandidateSearch: document.getElementById("recruiter-candidate-search"),
+  recruiterCandidateFilter: document.getElementById("recruiter-candidate-filter"),
+  recruiterCandidatesBody: document.getElementById("recruiter-candidates-body"),
+  recruiterStatusTimelineTitle: document.getElementById("recruiter-status-timeline-title"),
+  recruiterStatusTimelineSubtitle: document.getElementById("recruiter-status-timeline-subtitle"),
+  recruiterStatusTimelineBody: document.getElementById("recruiter-status-timeline-body"),
+  recruiterStatusTimelineBackBtn: document.getElementById("recruiter-status-timeline-back-btn"),
+  authSelectRecruiter: document.getElementById("auth-select-recruiter"),
   adminSettingsSeedBtn: document.getElementById("admin-settings-seed-btn"),
   adminSimLatency: document.getElementById("admin-sim-latency"),
   adminSimTaxrate: document.getElementById("admin-sim-taxrate"),
@@ -454,6 +477,7 @@ function logoutUser() {
   if (elements.authSelectBusiness) elements.authSelectBusiness.classList.add("active");
   if (elements.authSelectCandidate) elements.authSelectCandidate.classList.remove("active");
   if (elements.authSelectAdmin) elements.authSelectAdmin.classList.remove("active");
+  if (elements.authSelectRecruiter) elements.authSelectRecruiter.classList.remove("active");
   if (elements.loginEmailInput) elements.loginEmailInput.value = "hiring@techcorp.com";
   
   navigateTo("home");
@@ -920,6 +944,8 @@ function setupEventListeners() {
       navigateTo("admin");
     } else if (state.currentRole === "Candidate") {
       navigateTo("candidate-dashboard");
+    } else if (state.currentRole === "Recruiter") {
+      navigateTo("recruiter-dashboard");
     } else {
       navigateTo("home");
     }
@@ -949,6 +975,8 @@ function setupEventListeners() {
       navigateTo("admin");
     } else if (selectedRole === "Candidate") {
       navigateTo("candidate-dashboard");
+    } else if (selectedRole === "Recruiter") {
+      navigateTo("recruiter-dashboard");
     } else {
       navigateTo("home");
     }
@@ -964,6 +992,7 @@ function setupEventListeners() {
     elements.authSelectBusiness.classList.add("active");
     elements.authSelectCandidate.classList.remove("active");
     elements.authSelectAdmin.classList.remove("active");
+    if (elements.authSelectRecruiter) elements.authSelectRecruiter.classList.remove("active");
     state.currentRole = "Business";
     elements.loginEmailInput.value = "hiring@techcorp.com";
   });
@@ -972,6 +1001,7 @@ function setupEventListeners() {
     elements.authSelectCandidate.classList.add("active");
     elements.authSelectBusiness.classList.remove("active");
     elements.authSelectAdmin.classList.remove("active");
+    if (elements.authSelectRecruiter) elements.authSelectRecruiter.classList.remove("active");
     state.currentRole = "Candidate";
     elements.loginEmailInput.value = "candidate@talentsource.com";
   });
@@ -980,9 +1010,21 @@ function setupEventListeners() {
     elements.authSelectAdmin.classList.add("active");
     elements.authSelectBusiness.classList.remove("active");
     elements.authSelectCandidate.classList.remove("active");
+    if (elements.authSelectRecruiter) elements.authSelectRecruiter.classList.remove("active");
     state.currentRole = "Admin";
     elements.loginEmailInput.value = "admin@aisourcing.com";
   });
+
+  if (elements.authSelectRecruiter) {
+    elements.authSelectRecruiter.addEventListener("click", () => {
+      elements.authSelectRecruiter.classList.add("active");
+      elements.authSelectBusiness.classList.remove("active");
+      elements.authSelectCandidate.classList.remove("active");
+      elements.authSelectAdmin.classList.remove("active");
+      state.currentRole = "Recruiter";
+      elements.loginEmailInput.value = "sarah.connor@recruiter.com";
+    });
+  }
 
   // Login Simulator Form submit
   elements.authLoginForm.addEventListener("submit", (e) => {
@@ -999,6 +1041,8 @@ function setupEventListeners() {
         navigateTo("admin");
       } else if (state.currentRole === "Candidate") {
         navigateTo("candidate-dashboard");
+      } else if (state.currentRole === "Recruiter") {
+        navigateTo("recruiter-dashboard");
       } else {
         navigateTo("home");
       }
@@ -1251,7 +1295,7 @@ function setupEventListeners() {
         navigateTo("candidate-dashboard");
         const act = document.getElementById("dashboard-activity-panel");
         if (act) act.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else if (page && (page.startsWith("business-") || page.startsWith("admin-"))) {
+      } else if (page && (page.startsWith("business-") || page.startsWith("admin-") || page.startsWith("recruiter-"))) {
         navigateTo(page);
       }
     });
@@ -1296,6 +1340,41 @@ function setupEventListeners() {
     elements.businessSidebarLogoutBtn.addEventListener("click", (e) => {
       e.preventDefault();
       logoutUser();
+    });
+  }
+
+  if (elements.recruiterSidebarLogoutBtn) {
+    elements.recruiterSidebarLogoutBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      logoutUser();
+    });
+  }
+
+  if (elements.recruiterSidebarThemeToggle) {
+    elements.recruiterSidebarThemeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("light-mode");
+      const isLight = document.body.classList.contains("light-mode");
+      localStorage.setItem("ais_theme", isLight ? "light" : "dark");
+      syncThemeUI();
+    });
+  }
+
+  if (elements.recruiterCandidateSearch) {
+    elements.recruiterCandidateSearch.addEventListener("input", () => {
+      renderRecruiterCandidates();
+    });
+  }
+
+  if (elements.recruiterCandidateFilter) {
+    elements.recruiterCandidateFilter.addEventListener("change", () => {
+      renderRecruiterCandidates();
+    });
+  }
+
+  if (elements.recruiterStatusTimelineBackBtn) {
+    elements.recruiterStatusTimelineBackBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      navigateTo("recruiter-candidates");
     });
   }
 
@@ -2358,6 +2437,18 @@ function navigateTo(pageName) {
   if (elements.adminIntegrationsView) elements.adminIntegrationsView.classList.add("hidden");
   if (elements.customIntegrationModal) elements.customIntegrationModal.classList.add("hidden");
 
+  // Hide recruiter views
+  if (elements.recruiterLayoutWrapper) {
+    if (pageName.startsWith("recruiter-")) {
+      elements.recruiterLayoutWrapper.classList.remove("hidden");
+    } else {
+      elements.recruiterLayoutWrapper.classList.add("hidden");
+    }
+  }
+  if (elements.recruiterDashboardView) elements.recruiterDashboardView.classList.add("hidden");
+  if (elements.recruiterCandidatesView) elements.recruiterCandidatesView.classList.add("hidden");
+  if (elements.recruiterStatusTimelineView) elements.recruiterStatusTimelineView.classList.add("hidden");
+
   if (pageName === "home") {
     if (state.currentUser) {
       if (state.currentRole === "Candidate") {
@@ -2368,6 +2459,9 @@ function navigateTo(pageName) {
         return;
       } else if (state.currentRole === "Admin") {
         navigateTo("admin-dashboard");
+        return;
+      } else if (state.currentRole === "Recruiter") {
+        navigateTo("recruiter-dashboard");
         return;
       }
     }
@@ -2475,6 +2569,21 @@ function navigateTo(pageName) {
       elements.businessSettingsView.classList.remove("hidden");
       loadCompanyProfile();
     }
+  } else if (pageName === "recruiter-dashboard") {
+    if (elements.recruiterDashboardView) {
+      elements.recruiterDashboardView.classList.remove("hidden");
+      renderRecruiterDashboard();
+    }
+  } else if (pageName === "recruiter-candidates") {
+    if (elements.recruiterCandidatesView) {
+      elements.recruiterCandidatesView.classList.remove("hidden");
+      renderRecruiterCandidates();
+    }
+  } else if (pageName === "recruiter-status-timeline") {
+    if (elements.recruiterStatusTimelineView) {
+      elements.recruiterStatusTimelineView.classList.remove("hidden");
+      renderRecruiterTimeline();
+    }
   }
 
   // Update navigation highlighting
@@ -2526,6 +2635,8 @@ function updateNavHighlight(pageName) {
     } else if (pageName === "candidates" && page === "business-talent-catalog") {
       link.classList.add("active");
     } else if (pageName === "requirement" && page === "business-hiring-models") {
+      link.classList.add("active");
+    } else if (pageName === "recruiter-status-timeline" && page === "recruiter-candidates") {
       link.classList.add("active");
     }
   });
@@ -2612,6 +2723,7 @@ function renderAllViews() {
     if (elements.candidateLayoutWrapper) elements.candidateLayoutWrapper.classList.add("hidden");
     if (elements.businessLayoutWrapper) elements.businessLayoutWrapper.classList.add("hidden");
     if (elements.adminLayoutWrapper) elements.adminLayoutWrapper.classList.add("hidden");
+    if (elements.recruiterLayoutWrapper) elements.recruiterLayoutWrapper.classList.add("hidden");
   } else {
     elements.unauthContainer.classList.add("hidden");
     
@@ -2621,6 +2733,7 @@ function renderAllViews() {
       if (elements.candidateLayoutWrapper) elements.candidateLayoutWrapper.classList.add("hidden");
       if (elements.businessLayoutWrapper) elements.businessLayoutWrapper.classList.add("hidden");
       if (elements.adminLayoutWrapper) elements.adminLayoutWrapper.classList.remove("hidden");
+      if (elements.recruiterLayoutWrapper) elements.recruiterLayoutWrapper.classList.add("hidden");
       
       if (elements.businessContainer) elements.businessContainer.classList.add("hidden");
       elements.adminRedirectContainer.classList.add("hidden");
@@ -2643,12 +2756,35 @@ function renderAllViews() {
       } else if (state.activePage === "admin-status-timeline") {
         renderAdminStatusTimeline();
       }
+    } else if (role === "Recruiter") {
+      if (elements.mainHeader) elements.mainHeader.classList.add("hidden");
+      if (elements.mainContainer) elements.mainContainer.classList.add("hidden");
+      if (elements.candidateLayoutWrapper) elements.candidateLayoutWrapper.classList.add("hidden");
+      if (elements.businessLayoutWrapper) elements.businessLayoutWrapper.classList.add("hidden");
+      if (elements.adminLayoutWrapper) elements.adminLayoutWrapper.classList.add("hidden");
+      if (elements.recruiterLayoutWrapper) elements.recruiterLayoutWrapper.classList.remove("hidden");
+      
+      const rName = getCurrentRecruiterName();
+      if (elements.recruiterSidebarName) elements.recruiterSidebarName.textContent = rName;
+      
+      const parts = rName.split(/\s+/);
+      const initials = (parts[0] ? parts[0][0] : "") + (parts[1] ? parts[1][0] : "");
+      if (elements.recruiterSidebarAvatarCircle) elements.recruiterSidebarAvatarCircle.textContent = initials.toUpperCase() || "RC";
+      
+      if (state.activePage === "recruiter-dashboard") {
+        renderRecruiterDashboard();
+      } else if (state.activePage === "recruiter-candidates") {
+        renderRecruiterCandidates();
+      } else if (state.activePage === "recruiter-status-timeline") {
+        renderRecruiterTimeline();
+      }
     } else if (role === "Candidate") {
       if (elements.mainHeader) elements.mainHeader.classList.add("hidden");
       if (elements.mainContainer) elements.mainContainer.classList.add("hidden");
       if (elements.candidateLayoutWrapper) elements.candidateLayoutWrapper.classList.remove("hidden");
       if (elements.businessLayoutWrapper) elements.businessLayoutWrapper.classList.add("hidden");
       if (elements.adminLayoutWrapper) elements.adminLayoutWrapper.classList.add("hidden");
+      if (elements.recruiterLayoutWrapper) elements.recruiterLayoutWrapper.classList.add("hidden");
       
       // Update Sidebar profile dynamically
       const pf = state.candidateProfile;
@@ -2667,6 +2803,7 @@ function renderAllViews() {
       if (elements.candidateLayoutWrapper) elements.candidateLayoutWrapper.classList.add("hidden");
       if (elements.businessLayoutWrapper) elements.businessLayoutWrapper.classList.remove("hidden");
       if (elements.adminLayoutWrapper) elements.adminLayoutWrapper.classList.add("hidden");
+      if (elements.recruiterLayoutWrapper) elements.recruiterLayoutWrapper.classList.add("hidden");
       
       // Update Sidebar profile dynamically from state.companyProfile
       const cp = state.companyProfile || {
@@ -3196,6 +3333,21 @@ function syncThemeUI() {
     const moon = elements.adminSidebarThemeToggle.querySelector(".moon-icon");
     const sun = elements.adminSidebarThemeToggle.querySelector(".sun-icon");
     const text = elements.adminSidebarThemeToggle.querySelector(".theme-text");
+    if (isLight) {
+      if (moon) moon.classList.add("hidden");
+      if (sun) sun.classList.remove("hidden");
+      if (text) text.textContent = "Light Mode";
+    } else {
+      if (moon) moon.classList.remove("hidden");
+      if (sun) sun.classList.add("hidden");
+      if (text) text.textContent = "Dark Mode";
+    }
+  }
+
+  if (elements.recruiterSidebarThemeToggle) {
+    const moon = elements.recruiterSidebarThemeToggle.querySelector(".moon-icon");
+    const sun = elements.recruiterSidebarThemeToggle.querySelector(".sun-icon");
+    const text = elements.recruiterSidebarThemeToggle.querySelector(".theme-text");
     if (isLight) {
       if (moon) moon.classList.add("hidden");
       if (sun) sun.classList.remove("hidden");
@@ -6421,6 +6573,343 @@ window.deleteCustomIntegration = function(id) {
   saveIntegrations();
   renderAdminIntegrations();
   addAdminLog(`Deleted custom API integration`, "warning");
+};
+
+const recruiterEmailMap = {
+  "sarah.connor@recruiter.com": "Sarah Connor",
+  "michael.scott@recruiter.com": "Michael Scott",
+  "harvey.specter@recruiter.com": "Harvey Specter",
+  "jessica.pearson@recruiter.com": "Jessica Pearson"
+};
+
+function getCurrentRecruiterName() {
+  const email = state.currentUser || "sarah.connor@recruiter.com";
+  const mapped = recruiterEmailMap[email.toLowerCase()];
+  if (mapped) return mapped;
+  if (email.endsWith("@recruiter.com")) {
+    const parts = email.split("@")[0].split(".");
+    return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+  }
+  return "Sarah Connor";
+}
+
+function renderRecruiterDashboard() {
+  const recruiterName = getCurrentRecruiterName();
+  if (elements.recruiterDashboardWelcome) {
+    elements.recruiterDashboardWelcome.textContent = `Welcome, ${recruiterName}`;
+  }
+
+  // Get candidates assigned to this recruiter
+  const myCandidates = candidatesData.filter(c => {
+    const assignment = state.assignments[c.id];
+    return assignment && assignment.recruiter === recruiterName;
+  });
+
+  const totalAssigned = myCandidates.length;
+  let activeCount = 0;
+  let joinedCount = 0;
+  let rejectedCount = 0;
+
+  myCandidates.forEach(c => {
+    const status = state.candidateStatuses[c.id] || "Sourced";
+    if (status === "Joined") {
+      joinedCount++;
+    } else if (status === "Rejected") {
+      rejectedCount++;
+    } else {
+      activeCount++;
+    }
+  });
+
+  if (elements.recruiterCountAssigned) elements.recruiterCountAssigned.textContent = totalAssigned;
+  if (elements.recruiterCountActive) elements.recruiterCountActive.textContent = activeCount;
+  if (elements.recruiterCountJoined) elements.recruiterCountJoined.textContent = joinedCount;
+  if (elements.recruiterCountRejected) elements.recruiterCountRejected.textContent = rejectedCount;
+
+  // Filter logs for this recruiter's candidates
+  const myCandidateIds = new Set(myCandidates.map(c => c.id));
+  const logsContainer = elements.recruiterActivityLogs;
+  if (logsContainer) {
+    logsContainer.innerHTML = "";
+    
+    // Filter global admin logs to only include events that mention our candidates
+    const logs = (state.adminLogs || []).filter(log => {
+      for (const id of myCandidateIds) {
+        const altId = id.replace('TB-', 'AIS-');
+        if (log.text.includes(id) || log.text.includes(altId)) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (logs.length === 0) {
+      logsContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">No recent candidate activities.</div>`;
+    } else {
+      logs.slice(0, 10).forEach(log => {
+        const item = document.createElement("div");
+        item.style.display = "flex";
+        item.style.justifyContent = "space-between";
+        item.style.alignItems = "center";
+        item.style.padding = "10px 14px";
+        item.style.background = "rgba(255, 255, 255, 0.02)";
+        item.style.border = "1px solid var(--border-glass)";
+        item.style.borderRadius = "var(--radius-sm)";
+        item.style.fontSize = "0.85rem";
+        
+        let typeBadge = `<span class="badge badge-cyan" style="font-size:0.7rem; padding: 2px 6px;">${log.type}</span>`;
+        if (log.type === "success") typeBadge = `<span class="badge badge-emerald" style="font-size:0.7rem; padding: 2px 6px;">success</span>`;
+        else if (log.type === "warning") typeBadge = `<span class="badge badge-amber" style="font-size:0.7rem; padding: 2px 6px;">warning</span>`;
+        else if (log.type === "system") typeBadge = `<span class="badge badge-indigo" style="font-size:0.7rem; padding: 2px 6px;">system</span>`;
+
+        item.innerHTML = `
+          <div style="color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+            ${typeBadge}
+            <span>${log.text}</span>
+          </div>
+          <span style="color: var(--text-muted); font-size: 0.75rem;">${log.time}</span>
+        `;
+        logsContainer.appendChild(item);
+      });
+    }
+  }
+}
+
+function renderRecruiterCandidates() {
+  const container = elements.recruiterCandidatesBody;
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const recruiterName = getCurrentRecruiterName();
+  const searchVal = (elements.recruiterCandidateSearch?.value || "").toLowerCase().trim();
+  const filterVal = elements.recruiterCandidateFilter?.value || "all";
+
+  // Filter candidates Data to only those assigned to the current recruiter
+  let list = candidatesData.filter(c => {
+    const assignment = state.assignments[c.id];
+    return assignment && assignment.recruiter === recruiterName;
+  }).map(cand => {
+    const mock = candidateMockDetails[cand.id] || { name: `Candidate #${cand.id.replace('TB-', 'AIS-')}`, company: "N/A" };
+    const status = state.candidateStatuses[cand.id] || "Sourced";
+    return {
+      ...cand,
+      name: mock.name,
+      company: mock.company,
+      status: status
+    };
+  });
+
+  // Apply Search Filter
+  if (searchVal) {
+    list = list.filter(c => 
+      c.name.toLowerCase().includes(searchVal) ||
+      c.role.toLowerCase().includes(searchVal) ||
+      c.company.toLowerCase().includes(searchVal) ||
+      c.id.toLowerCase().includes(searchVal)
+    );
+  }
+
+  // Apply Status Dropdown Filter
+  if (filterVal !== "all") {
+    if (filterVal === "Active") {
+      list = list.filter(c => c.status !== "Joined" && c.status !== "Rejected");
+    } else {
+      list = list.filter(c => c.status === filterVal);
+    }
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px;">No candidates assigned to you match your criteria.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  list.forEach(c => {
+    const row = document.createElement("tr");
+
+    const email = c.email || (c.name.toLowerCase().replace(/\s+/g, ".") + "@example.com");
+    const rawId = c.id.replace(/\D/g, "") || "999";
+    const phone = c.mobile || `+9198000${rawId}01`;
+    const whatsappPhone = phone.replace(/\D/g, "");
+
+    const statuses = [
+      "Sourced", "Submitted", "L1 Scheduled", "L1 Select", 
+      "L2 Scheduled", "L2 Select", "L3 Scheduled", "L3 Select", 
+      "Offered", "Joined", "Rejected"
+    ];
+    const optionsHtml = statuses.map(s => `
+      <option value="${s}" ${c.status === s ? 'selected' : ''}>${s}</option>
+    `).join("");
+
+    const timeline = state.statusTimelines[c.id] || [];
+    const latestEvent = timeline[timeline.length - 1] || { status: c.status, timestamp: Date.now() };
+    const latestStatusText = latestEvent.status;
+    const timeAgo = getRelativeTime(latestEvent.timestamp);
+    const timelineDisplay = `${latestStatusText} (${timeAgo})`;
+
+    row.innerHTML = `
+      <td style="font-weight: 600; color: var(--accent-indigo);">${c.id.replace('TB-', 'AIS-')}</td>
+      <td>
+        <a href="#" class="recruiter-candidate-name-link" data-id="${c.id}" style="color: var(--text-primary); font-weight: 600; text-decoration: none; border-bottom: 1px dashed var(--accent-indigo); transition: var(--transition-smooth); cursor: pointer;">${c.name}</a>
+      </td>
+      <td><strong>${c.role}</strong></td>
+      <td>${c.company}</td>
+      <td>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <a href="#" class="contact-action-icon" title="Email: ${email}" onclick="event.preventDefault(); openEmailComposer('${c.id}', '${email}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          </a>
+          <a href="tel:${phone}" class="contact-action-icon" title="Call: ${phone}" onclick="logContactAction('${c.id}', 'Phone')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+          </a>
+          <a href="sms:${phone}" class="contact-action-icon" title="SMS: ${phone}" onclick="logContactAction('${c.id}', 'SMS')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </a>
+          <a href="https://wa.me/${whatsappPhone}" target="_blank" class="contact-action-icon whatsapp" title="WhatsApp: +${whatsappPhone}" onclick="logContactAction('${c.id}', 'WhatsApp')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          </a>
+        </div>
+      </td>
+      <td>
+        <a href="#" class="recruiter-status-timeline-link" data-id="${c.id}" style="color: var(--accent-indigo); font-weight: 600; text-decoration: none; border-bottom: 1px dashed var(--accent-indigo); transition: var(--transition-smooth); cursor: pointer;" title="View Status Timeline History">
+          ${timelineDisplay}
+        </a>
+      </td>
+      <td>
+        <select class="form-input" style="margin-top: 0; padding: 6px 12px; font-size: 0.85rem; width: auto; background: var(--bg-glass);" onchange="updateRecruiterCandidateStatus('${c.id}', this.value)">
+          ${optionsHtml}
+        </select>
+      </td>
+    `;
+    container.appendChild(row);
+  });
+
+  // Bind click listeners
+  container.querySelectorAll(".recruiter-candidate-name-link").forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = link.dataset.id;
+      showCandidateProfileModal(id);
+    });
+  });
+
+  container.querySelectorAll(".recruiter-status-timeline-link").forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = link.dataset.id;
+      state.activeTimelineCandidateId = id;
+      navigateTo("recruiter-status-timeline");
+    });
+  });
+}
+
+function renderRecruiterTimeline() {
+  const candidateId = state.activeTimelineCandidateId;
+  const container = elements.recruiterStatusTimelineBody;
+  if (!container || !candidateId) return;
+
+  container.innerHTML = "";
+
+  const cand = candidatesData.find(c => c.id === candidateId);
+  const mock = candidateMockDetails[candidateId] || { name: `Candidate #${candidateId.replace('TB-', 'AIS-')}`, company: "N/A" };
+  const name = mock.name;
+
+  if (elements.recruiterStatusTimelineTitle) {
+    elements.recruiterStatusTimelineTitle.textContent = `Funnel Timeline: ${name}`;
+  }
+  if (elements.recruiterStatusTimelineSubtitle) {
+    elements.recruiterStatusTimelineSubtitle.textContent = `Status progression tracking for Candidate ID: ${candidateId.replace('TB-', 'AIS-')} at ${mock.company}`;
+  }
+
+  const timeline = state.statusTimelines[candidateId] || [];
+
+  if (timeline.length === 0) {
+    container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:30px;">No timeline records found for this candidate.</p>`;
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "timeline-wrapper";
+  wrapper.style.position = "relative";
+  wrapper.style.paddingLeft = "30px";
+  wrapper.style.borderLeft = "2px solid rgba(99, 102, 241, 0.2)";
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  wrapper.style.gap = "24px";
+
+  timeline.forEach((event, index) => {
+    const item = document.createElement("div");
+    item.style.position = "relative";
+    
+    // Dot indicator
+    const dot = document.createElement("div");
+    dot.style.position = "absolute";
+    dot.style.left = "-41px";
+    dot.style.top = "4px";
+    dot.style.width = "20px";
+    dot.style.height = "20px";
+    dot.style.borderRadius = "50%";
+    dot.style.background = "var(--bg-primary)";
+    dot.style.border = "4px solid var(--accent-indigo)";
+    dot.style.boxShadow = "0 0 10px rgba(99, 102, 241, 0.4)";
+    
+    const isLast = index === timeline.length - 1;
+    if (isLast) {
+      dot.style.borderColor = "var(--accent-emerald)";
+      dot.style.boxShadow = "0 0 10px rgba(16, 185, 129, 0.6)";
+    }
+
+    const date = new Date(event.timestamp).toLocaleString();
+    const relativeTime = getRelativeTime(event.timestamp);
+
+    item.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+        <h4 style="font-size:1.15rem; font-weight:700; color:var(--text-primary);">${event.status}</h4>
+        <span style="font-size:0.8rem; color:var(--text-muted)">${date} (${relativeTime})</span>
+      </div>
+      <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Updated by: <strong style="color:var(--text-primary)">${event.user}</strong></p>
+      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-glass); border-radius:var(--radius-sm); padding:10px 14px; font-size:0.85rem; color:var(--text-secondary); margin-top:8px;">
+        ${event.notes || 'No description available'}
+      </div>
+    `;
+    item.appendChild(dot);
+    wrapper.appendChild(item);
+  });
+
+  container.appendChild(wrapper);
+}
+
+window.updateRecruiterCandidateStatus = function(candidateId, newStatus) {
+  state.candidateStatuses[candidateId] = newStatus;
+
+  // Sync request status if a request exists for this candidate
+  const req = state.requests.find(r => r.candidateId === candidateId && r.status === "In Process");
+  if (req) {
+    if (newStatus === "Joined") {
+      req.status = "Fulfilled";
+      addAdminLog(`Placement request ${req.id} fulfilled automatically because candidate joined`, "success");
+      saveRequestsToStorage();
+    } else if (newStatus === "Rejected") {
+      req.status = "Rejected";
+      addAdminLog(`Placement request ${req.id} rejected because candidate was rejected`, "warning");
+      saveRequestsToStorage();
+    }
+  }
+
+  saveCandidateStatuses();
+
+  // Find candidate name
+  const name = (candidateMockDetails[candidateId] && candidateMockDetails[candidateId].name) || `Candidate #${candidateId.replace('TB-', 'AIS-')}`;
+  const recruiterName = getCurrentRecruiterName();
+  addAdminLog(`Recruiter ${recruiterName} transitioned status of ${name} to ${newStatus}`, "system");
+
+  renderRecruiterDashboard();
+  renderRecruiterCandidates();
+  renderAdminDashboard();
 };
 
 // Start operations on page load
