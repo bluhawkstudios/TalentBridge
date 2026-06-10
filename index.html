@@ -238,6 +238,11 @@
           <span>Messages</span>
           <span class="sidebar-badge" style="background: var(--accent-indigo);">2</span>
         </a>
+        <a href="#" class="sidebar-link" data-page="candidate-notifications" style="display: none !important;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span>Notifications</span>
+          <span class="sidebar-badge notification-badge hidden" style="background: var(--accent-indigo); margin-left: auto;"></span>
+        </a>
         <a href="#" class="sidebar-link" data-page="candidate-profile">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           <span>Profile</span>
@@ -270,7 +275,33 @@
     </aside>
 
     <!-- Candidate Main Content Area -->
-    <div class="candidate-content-area">
+    <div class="candidate-content-area" style="position: relative;">
+      
+      <!-- Notification Dropdown Widget (top right) -->
+      <div class="notification-dropdown-container">
+        <button class="notification-bell-btn" id="candidate-notification-btn" aria-label="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="bell-badge notification-badge hidden" id="candidate-notification-badge">0</span>
+        </button>
+        <div class="notification-dropdown glass-panel hidden" id="candidate-notification-dropdown">
+          <div class="dropdown-header">
+            <h3>Notifications</h3>
+            <div class="dropdown-actions">
+              <a href="#" onclick="event.preventDefault(); markAllNotificationsRead('Candidate')">Mark all read</a>
+              <a href="#" onclick="event.preventDefault(); clearAllNotifications('Candidate')">Clear all</a>
+            </div>
+          </div>
+          <div class="dropdown-tabs">
+            <button class="tab-btn active" id="candidate-notif-filter-all" onclick="filterNotifications('Candidate', 'all')">All</button>
+            <button class="tab-btn" id="candidate-notif-filter-unread" onclick="filterNotifications('Candidate', 'unread')">Unread</button>
+          </div>
+          <div class="dropdown-list" id="candidate-notifications-list">
+            <!-- Dynamic items -->
+          </div>
+        </div>
+      </div>
 
       <!-- ==================== VIEW 5: CANDIDATE DASHBOARD ==================== -->
       <section id="candidate-dashboard-view" class="view-panel hidden" style="padding: 30px;">
@@ -281,10 +312,6 @@
             <p class="welcome-subtitle">Here's what's happening with your job search.</p>
           </div>
           <div class="welcome-actions">
-            <button class="notification-bell-btn" id="candidate-notification-btn" aria-label="Notifications">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              <span class="bell-badge">2</span>
-            </button>
             <button class="btn-nav-action primary" id="dashboard-find-jobs-btn" style="height: 42px; border-radius: var(--radius-sm); font-size: 0.85rem; padding: 0 20px;">Find Jobs</button>
           </div>
         </div>
@@ -880,7 +907,32 @@
           </div>
         </div>
       </div>
-    </section>
+      </section>
+
+      <!-- Candidate Notifications view -->
+      <section id="candidate-notifications-view" class="view-panel hidden" style="padding: 30px;">
+        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2 class="dashboard-title text-gradient" style="font-size: 1.6rem; font-weight: 700; font-family: 'Outfit', sans-serif;">Your Notifications</h2>
+            <p class="dashboard-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Updates on your profile review, application updates, and scheduled interviews</p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn-nav-action secondary" onclick="markAllNotificationsRead('Candidate')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer;">Mark all as read</button>
+            <button class="btn-nav-action secondary" onclick="clearAllNotifications('Candidate')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.2);">Clear all</button>
+          </div>
+        </div>
+        
+        <div class="notification-filters">
+          <button class="notification-filter-btn active" id="candidate-notif-filter-all" onclick="filterNotifications('Candidate', 'all')">All</button>
+          <button class="notification-filter-btn" id="candidate-notif-filter-unread" onclick="filterNotifications('Candidate', 'unread')">Unread</button>
+        </div>
+
+        <div class="glass-panel" style="padding: 24px;">
+          <div class="notification-list" id="candidate-notifications-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
     </div> <!-- .candidate-content-area -->
   </div> <!-- #candidate-layout-wrapper -->
 
@@ -925,6 +977,11 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span>Company Settings</span>
         </a>
+        <a href="#" class="sidebar-link" data-page="business-notifications" style="display: none !important;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span>Notifications</span>
+          <span class="sidebar-badge notification-badge hidden" style="background: var(--accent-indigo); margin-left: auto;"></span>
+        </a>
       </nav>
       
       <div class="sidebar-footer">
@@ -940,8 +997,33 @@
       </div>
     </aside>
 
-    <!-- Business Main Content Area -->
-    <div class="business-content-area" style="flex:1; height:100vh; overflow-y:auto; padding:40px;">
+    <div class="business-content-area" style="flex:1; height:100vh; overflow-y:auto; padding:40px; position: relative;">
+      
+      <!-- Notification Dropdown Widget (top right) -->
+      <div class="notification-dropdown-container">
+        <button class="notification-bell-btn" id="business-notification-btn" aria-label="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="bell-badge notification-badge hidden" id="business-notification-badge">0</span>
+        </button>
+        <div class="notification-dropdown glass-panel hidden" id="business-notification-dropdown">
+          <div class="dropdown-header">
+            <h3>Notifications</h3>
+            <div class="dropdown-actions">
+              <a href="#" onclick="event.preventDefault(); markAllNotificationsRead('Business')">Mark all read</a>
+              <a href="#" onclick="event.preventDefault(); clearAllNotifications('Business')">Clear all</a>
+            </div>
+          </div>
+          <div class="dropdown-tabs">
+            <button class="tab-btn active" id="business-notif-filter-all" onclick="filterNotifications('Business', 'all')">All</button>
+            <button class="tab-btn" id="business-notif-filter-unread" onclick="filterNotifications('Business', 'unread')">Unread</button>
+          </div>
+          <div class="dropdown-list" id="business-notifications-list">
+            <!-- Dynamic items -->
+          </div>
+        </div>
+      </div>
       
       <!-- ==================== VIEW B1: BUSINESS DASHBOARD ==================== -->
       <section id="business-dashboard-view" class="view-panel" style="padding: 30px;">
@@ -1456,6 +1538,30 @@
         </div>
       </section>
 
+      <!-- Business Notifications view -->
+      <section id="business-notifications-view" class="view-panel hidden" style="padding: 30px;">
+        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2 class="dashboard-title text-gradient" style="font-size: 1.6rem; font-weight: 700; font-family: 'Outfit', sans-serif;">Your Notifications</h2>
+            <p class="dashboard-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Updates on your job requests, candidate statuses, and billing invoices</p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn-nav-action secondary" onclick="markAllNotificationsRead('Business')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer;">Mark all as read</button>
+            <button class="btn-nav-action secondary" onclick="clearAllNotifications('Business')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.2);">Clear all</button>
+          </div>
+        </div>
+        
+        <div class="notification-filters">
+          <button class="notification-filter-btn active" id="business-notif-filter-all" onclick="filterNotifications('Business', 'all')">All</button>
+          <button class="notification-filter-btn" id="business-notif-filter-unread" onclick="filterNotifications('Business', 'unread')">Unread</button>
+        </div>
+
+        <div class="glass-panel" style="padding: 24px;">
+          <div class="notification-list" id="business-notifications-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
     </div> <!-- .business-content-area -->
   </div> <!-- #business-layout-wrapper -->
 
@@ -1500,6 +1606,20 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
           <span>API Integrations</span>
         </a>
+        <a href="#" class="sidebar-link" data-page="admin-tasks">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          <span>Task Board</span>
+        </a>
+        <a href="#" class="sidebar-link" data-page="admin-messages" style="display: none !important;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span>Recruiter Chat</span>
+          <span class="sidebar-badge chat-badge hidden" id="admin-chat-badge" style="background: var(--accent-rose); margin-left: auto;"></span>
+        </a>
+        <a href="#" class="sidebar-link" data-page="admin-notifications" style="display: none !important;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span>Notifications</span>
+          <span class="sidebar-badge notification-badge hidden" style="background: var(--accent-indigo); margin-left: auto;"></span>
+        </a>
       </nav>
       
       <div class="sidebar-footer">
@@ -1515,8 +1635,33 @@
       </div>
     </aside>
 
-    <!-- Admin Main Content Area -->
-    <div class="admin-content-area" style="flex:1; height:100vh; overflow-y:auto; padding:40px;">
+    <div class="admin-content-area" style="flex:1; height:100vh; overflow-y:auto; padding:40px; position: relative;">
+      
+      <!-- Notification Dropdown Widget (top right) -->
+      <div class="notification-dropdown-container">
+        <button class="notification-bell-btn" id="admin-notification-btn" aria-label="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="bell-badge notification-badge hidden" id="admin-notification-badge">0</span>
+        </button>
+        <div class="notification-dropdown glass-panel hidden" id="admin-notification-dropdown">
+          <div class="dropdown-header">
+            <h3>Notifications</h3>
+            <div class="dropdown-actions">
+              <a href="#" onclick="event.preventDefault(); markAllNotificationsRead('Admin')">Mark all read</a>
+              <a href="#" onclick="event.preventDefault(); clearAllNotifications('Admin')">Clear all</a>
+            </div>
+          </div>
+          <div class="dropdown-tabs">
+            <button class="tab-btn active" id="admin-notif-filter-all" onclick="filterNotifications('Admin', 'all')">All</button>
+            <button class="tab-btn" id="admin-notif-filter-unread" onclick="filterNotifications('Admin', 'unread')">Unread</button>
+          </div>
+          <div class="dropdown-list" id="admin-notifications-list">
+            <!-- Dynamic items -->
+          </div>
+        </div>
+      </div>
       
       <!-- ==================== VIEW AD1: ADMIN DASHBOARD ==================== -->
       <section id="admin-dashboard-view" class="view-panel" style="padding: 30px;">
@@ -1763,11 +1908,44 @@
           <h2 class="text-gradient">Global Vetted Talent Directory</h2>
           <span class="badge badge-cyan" id="admin-talent-count-indicator">15 Candidates</span>
         </div>
+        <!-- Talent Directory Bulk Actions Panel (hidden by default) -->
+        <div id="talent-bulk-actions-panel" class="bulk-actions-panel hidden" style="margin-bottom: 20px;">
+          <div class="bulk-actions-info">
+            <input type="checkbox" id="talent-select-all-checkbox" class="table-row-checkbox" style="margin-right: 8px;">
+            <span class="bulk-actions-count" id="talent-bulk-count">0</span>
+            <span>candidates selected</span>
+          </div>
+          <div class="bulk-actions-btns">
+            <!-- Bulk Assign Recruiter -->
+            <select id="bulk-talent-recruiter-select" class="form-select" style="background: var(--bg-glass); width: 160px; padding: 6px 12px; font-size: 0.8rem; height: 32px; margin-top: 0;">
+              <option value="" disabled selected>Assign Recruiter...</option>
+              <option value="Sarah Connor">Sarah Connor</option>
+              <option value="Michael Scott">Michael Scott</option>
+              <option value="Harvey Specter">Harvey Specter</option>
+              <option value="Jessica Pearson">Jessica Pearson</option>
+            </select>
+            <select id="bulk-talent-company-select" class="form-select" style="background: var(--bg-glass); width: 160px; padding: 6px 12px; font-size: 0.8rem; height: 32px; margin-top: 0;">
+              <option value="" disabled selected>Assign Client...</option>
+              <option value="DataShield Inc.">DataShield Inc.</option>
+              <option value="Global Tech Corp.">Global Tech Corp.</option>
+              <option value="TechMahindra">TechMahindra</option>
+              <option value="Infosys">Infosys</option>
+              <option value="Wipro">Wipro</option>
+              <option value="Acme Corp.">Acme Corp.</option>
+              <option value="Stripe">Stripe</option>
+              <option value="Google">Google</option>
+            </select>
+            <button type="button" class="btn-nav-action primary" id="bulk-talent-assign-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Bulk Assign</button>
+            <button type="button" class="btn-nav-action secondary" id="bulk-talent-clear-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Clear Selection</button>
+          </div>
+        </div>
+
         <div class="glass-panel" style="padding: 24px;">
           <div class="tracker-table-container">
             <table class="tracker-table" id="admin-talent-page-table">
               <thead>
                 <tr>
+                  <th class="table-checkbox-col"><input type="checkbox" id="talent-header-checkbox" class="table-row-checkbox"></th>
                   <th>Candidate ID</th>
                   <th>Position / Role</th>
                   <th>Match Competency</th>
@@ -1860,9 +2038,9 @@
         <div class="glass-panel" style="padding: 20px; margin-bottom: 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
           <div style="flex: 1; min-width: 250px; display: flex; gap: 10px;">
             <input type="text" id="cv-sourced-search" class="form-input" placeholder="Search by name, position, or company..." style="margin-top: 0; flex: 1;">
-            <button class="btn-nav-action primary" id="cv-sourced-search-btn" style="height: 42px; margin: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; cursor: pointer;">
+            <button type="button" class="btn-nav-action primary" id="cv-sourced-search-btn" style="height: 42px; margin: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; cursor: pointer;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <span>Source</span>
+              <span>Search</span>
             </button>
           </div>
           <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
@@ -1890,16 +2068,74 @@
                 <option value="experience-desc">Sort: Experience (High-Low)</option>
               </select>
             </div>
-            <button class="btn-nav-action secondary" id="admin-cv-sourced-back-btn" style="padding: 10px 18px; font-size: 0.85rem; height: 42px;">&larr; Back to Dashboard</button>
+            <div style="display: flex; gap: 4px; border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 2px;">
+              <button type="button" class="btn-nav-action secondary active" id="sourcing-view-table-btn" style="padding: 6px 12px; font-size: 0.8rem; height: 36px; border: none; margin: 0; cursor: pointer;">Table</button>
+              <button type="button" class="btn-nav-action secondary" id="sourcing-view-kanban-btn" style="padding: 6px 12px; font-size: 0.8rem; height: 36px; border: none; margin: 0; cursor: pointer;">Kanban</button>
+            </div>
+            <button type="button" class="btn-nav-action secondary" id="admin-cv-sourced-back-btn" style="padding: 10px 18px; font-size: 0.85rem; height: 42px; margin: 0;">&larr; Back</button>
           </div>
         </div>
 
-        <!-- Table Grid -->
-        <div class="glass-panel" style="padding: 24px;">
+        <!-- Sourcing Pipeline Bulk Actions Panel (hidden by default) -->
+        <div id="sourcing-bulk-actions-panel" class="bulk-actions-panel hidden" style="margin-bottom: 20px;">
+          <div class="bulk-actions-info">
+            <input type="checkbox" id="sourcing-select-all-checkbox" class="table-row-checkbox" style="margin-right: 8px;">
+            <span class="bulk-actions-count" id="sourcing-bulk-count">0</span>
+            <span>candidates selected</span>
+          </div>
+          <div class="bulk-actions-btns">
+            <!-- Bulk Assign Recruiter -->
+            <select id="bulk-sourcing-recruiter-select" class="form-select" style="background: var(--bg-glass); width: 160px; padding: 6px 12px; font-size: 0.8rem; height: 32px; margin-top: 0;">
+              <option value="" disabled selected>Assign Recruiter...</option>
+              <option value="Sarah Connor">Sarah Connor</option>
+              <option value="Michael Scott">Michael Scott</option>
+              <option value="Harvey Specter">Harvey Specter</option>
+              <option value="Jessica Pearson">Jessica Pearson</option>
+            </select>
+            <select id="bulk-sourcing-company-select" class="form-select" style="background: var(--bg-glass); width: 160px; padding: 6px 12px; font-size: 0.8rem; height: 32px; margin-top: 0;">
+              <option value="" disabled selected>Assign Client...</option>
+              <option value="DataShield Inc.">DataShield Inc.</option>
+              <option value="Global Tech Corp.">Global Tech Corp.</option>
+              <option value="TechMahindra">TechMahindra</option>
+              <option value="Infosys">Infosys</option>
+              <option value="Wipro">Wipro</option>
+              <option value="Acme Corp.">Acme Corp.</option>
+              <option value="Stripe">Stripe</option>
+              <option value="Google">Google</option>
+            </select>
+            <button type="button" class="btn-nav-action primary" id="bulk-sourcing-assign-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Bulk Assign</button>
+
+            <!-- Bulk Status Transition -->
+            <select id="bulk-sourcing-status-select" class="form-select" style="background: var(--bg-glass); width: 150px; padding: 6px 12px; font-size: 0.8rem; height: 32px; margin-top: 0;">
+              <option value="" disabled selected>Change Status...</option>
+              <option value="Sourced">Sourced</option>
+              <option value="Submitted">Submitted</option>
+              <option value="L1 Scheduled">L1 Scheduled</option>
+              <option value="L1 Select">L1 Select</option>
+              <option value="L2 Scheduled">L2 Scheduled</option>
+              <option value="L2 Select">L2 Select</option>
+              <option value="L3 Scheduled">L3 Scheduled</option>
+              <option value="L3 Select">L3 Select</option>
+              <option value="Offered">Offered</option>
+              <option value="Joined">Joined</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+            <button type="button" class="btn-nav-action primary" id="bulk-sourcing-status-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Bulk Update</button>
+
+            <!-- Add to Talent Pool / Vetted Talent -->
+            <button type="button" class="btn-nav-action secondary" id="bulk-sourcing-vetted-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Bulk Add Vetted</button>
+
+            <button type="button" class="btn-nav-action secondary" id="bulk-sourcing-clear-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Clear</button>
+          </div>
+        </div>
+
+        <!-- Table Grid Container -->
+        <div class="glass-panel" id="sourcing-table-view-container" style="padding: 24px;">
           <div class="tracker-table-container">
             <table class="tracker-table" id="admin-cv-sourced-table">
               <thead>
                 <tr>
+                  <th class="table-checkbox-col"><input type="checkbox" id="cv-sourced-header-checkbox" class="table-row-checkbox"></th>
                   <th>Candidate ID</th>
                   <th>Name</th>
                   <th>Position</th>
@@ -1915,6 +2151,54 @@
                 <!-- Populated dynamically -->
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Sourcing Kanban View Container (hidden by default) -->
+        <div class="kanban-board-container hidden" id="sourcing-kanban-view-container" style="overflow-x: auto; min-height: 400px; padding-bottom: 24px; width: 100%;">
+          <!-- Column: Sourced -->
+          <div class="kanban-column" style="min-width: 260px;" data-stage="Sourced">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">Sourced</span>
+              <span class="kanban-column-count" id="sourcing-kanban-count-sourced">0</span>
+            </div>
+            <div class="kanban-cards-list" id="sourcing-kanban-list-sourced"></div>
+          </div>
+
+          <!-- Column: Submitted -->
+          <div class="kanban-column" style="min-width: 260px;" data-stage="Submitted">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">Submitted</span>
+              <span class="kanban-column-count" id="sourcing-kanban-count-submitted">0</span>
+            </div>
+            <div class="kanban-cards-list" id="sourcing-kanban-list-submitted"></div>
+          </div>
+
+          <!-- Column: Interviews -->
+          <div class="kanban-column" style="min-width: 260px;" data-stage="Interviews">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">Interviews (L1-L3)</span>
+              <span class="kanban-column-count" id="sourcing-kanban-count-interviews">0</span>
+            </div>
+            <div class="kanban-cards-list" id="sourcing-kanban-list-interviews"></div>
+          </div>
+
+          <!-- Column: Placed -->
+          <div class="kanban-column" style="min-width: 260px;" data-stage="Placed">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">Placed / Offered</span>
+              <span class="kanban-column-count" id="sourcing-kanban-count-placed">0</span>
+            </div>
+            <div class="kanban-cards-list" id="sourcing-kanban-list-placed"></div>
+          </div>
+
+          <!-- Column: Rejected -->
+          <div class="kanban-column" style="min-width: 260px;" data-stage="Rejected">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">Rejected</span>
+              <span class="kanban-column-count" id="sourcing-kanban-count-rejected">0</span>
+            </div>
+            <div class="kanban-cards-list" id="sourcing-kanban-list-rejected"></div>
           </div>
         </div>
       </section>
@@ -1957,7 +2241,172 @@
         </div>
       </section>
 
+      <!-- Admin Recruiter Chat View (Legacy full screen - hidden/unused) -->
+      <section id="admin-messages-view" class="view-panel hidden"></section>
+
+      <!-- Admin Notifications View -->
+      <section id="admin-notifications-view" class="view-panel hidden" style="padding: 30px;">
+        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2 class="dashboard-title text-gradient" style="font-size: 1.6rem; font-weight: 700; font-family: 'Outfit', sans-serif;">System Notifications</h2>
+            <p class="dashboard-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Global notifications on client requests, candidate placements, and recruiter communications</p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn-nav-action secondary" onclick="markAllNotificationsRead('Admin')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer;">Mark all as read</button>
+            <button class="btn-nav-action secondary" onclick="clearAllNotifications('Admin')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.2);">Clear all</button>
+          </div>
+        </div>
+        
+        <div class="notification-filters">
+          <button class="notification-filter-btn active" id="admin-notif-filter-all" onclick="filterNotifications('Admin', 'all')">All</button>
+          <button class="notification-filter-btn" id="admin-notif-filter-unread" onclick="filterNotifications('Admin', 'unread')">Unread</button>
+        </div>
+
+        <div class="glass-panel" style="padding: 24px;">
+          <div class="notification-list" id="admin-notifications-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== VIEW: ADMIN TASK BOARD ==================== -->
+      <section id="admin-tasks-view" class="view-panel hidden" style="padding: 30px;">
+        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
+          <div>
+            <h2 class="dashboard-title text-gradient" style="font-size: 1.6rem; font-weight: 700; font-family: 'Outfit', sans-serif;">Recruiter Task Board</h2>
+            <p class="dashboard-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Manage, assign, and track recruitment tasks and coordination pipelines.</p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button type="button" class="btn-nav-action primary" id="admin-create-task-btn" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer; height: auto; margin: 0;">+ Create Task</button>
+          </div>
+        </div>
+
+        <!-- Task Filters & Controls -->
+        <div class="glass-panel" style="padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+          <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0;">Filter by Recruiter</label>
+              <select id="task-filter-recruiter" class="form-select" style="background: var(--bg-glass); width: 180px; padding: 6px 12px; height: 36px; margin-top: 0;">
+                <option value="all">All Recruiters</option>
+                <option value="Sarah Connor">Sarah Connor</option>
+                <option value="Michael Scott">Michael Scott</option>
+                <option value="Harvey Specter">Harvey Specter</option>
+                <option value="Jessica Pearson">Jessica Pearson</option>
+              </select>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0;">Filter by Priority</label>
+              <select id="task-filter-priority" class="form-select" style="background: var(--bg-glass); width: 140px; padding: 6px 12px; height: 36px; margin-top: 0;">
+                <option value="all">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0;">Sort by</label>
+              <select id="task-sort-by" class="form-select" style="background: var(--bg-glass); width: 140px; padding: 6px 12px; height: 36px; margin-top: 0;">
+                <option value="dueDate">Due Date</option>
+                <option value="priority">Priority Level</option>
+                <option value="title">Alphabetical</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Bulk Actions Panel (hidden by default) -->
+        <div id="task-bulk-actions-panel" class="bulk-actions-panel hidden" style="margin-bottom: 20px;">
+          <div class="bulk-actions-info">
+            <span class="bulk-actions-count" id="task-bulk-count">0</span>
+            <span>tasks selected</span>
+          </div>
+          <div class="bulk-actions-btns">
+            <select id="bulk-task-status-select" class="form-select" style="background: var(--bg-glass); width: 160px; padding: 6px 12px; font-size: 0.8rem; height: 32px; margin-top: 0;">
+              <option value="" disabled selected>Move Status to...</option>
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+            <button type="button" class="btn-nav-action primary" id="bulk-task-move-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Apply Move</button>
+            <button type="button" class="btn-nav-action secondary" id="bulk-task-delete-btn" style="padding: 6px 12px; font-size: 0.8rem; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.2); height: auto; margin: 0;">Delete Selected</button>
+            <button type="button" class="btn-nav-action secondary" id="bulk-task-clear-btn" style="padding: 6px 12px; font-size: 0.8rem; height: auto; margin: 0;">Clear Selection</button>
+          </div>
+        </div>
+
+        <!-- Kanban Board Container -->
+        <div class="kanban-board-container" id="admin-kanban-board">
+          <!-- Column: To Do -->
+          <div class="kanban-column" data-status="todo">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">To Do</span>
+              <span class="kanban-column-count" id="count-todo">0</span>
+            </div>
+            <div class="kanban-cards-list" id="list-todo">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Column: In Progress -->
+          <div class="kanban-column" data-status="inprogress">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">In Progress</span>
+              <span class="kanban-column-count" id="count-inprogress">0</span>
+            </div>
+            <div class="kanban-cards-list" id="list-inprogress">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Column: Done -->
+          <div class="kanban-column" data-status="done">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">Done</span>
+              <span class="kanban-column-count" id="count-done">0</span>
+            </div>
+            <div class="kanban-cards-list" id="list-done">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div> <!-- .admin-content-area -->
+
+    <!-- Floating Admin-Recruiter Chat Widget -->
+    <div class="floating-chat-container" id="admin-floating-chat">
+      <!-- Chat Window (hidden by default) -->
+      <div class="floating-chat-window glass-panel hidden" id="admin-chat-card">
+        
+        <!-- Roster View -->
+        <div class="floating-chat-roster-view" id="admin-chat-roster-view">
+          <div class="floating-chat-header">
+            <div class="floating-chat-header-title">Recruiter Chats</div>
+            <button class="floating-chat-close-btn" id="admin-chat-roster-close">&times;</button>
+          </div>
+          <div class="floating-chat-roster-list chat-roster" id="admin-chat-recruiter-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Thread View (hidden by default) -->
+        <div class="floating-chat-thread-view hidden" id="admin-chat-thread-view">
+          <div class="chat-main-window" id="admin-chat-window">
+            <!-- Active chat workspace, holds messages container and input form -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Toggle Button -->
+      <button class="floating-chat-toggle-btn" id="admin-chat-toggle-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="floating-chat-badge hidden" id="admin-chat-badge-floating">0</span>
+      </button>
+    </div>
   </div> <!-- #admin-layout-wrapper -->
 
   <!-- ==================== RECRUITER WORKSPACE LAYOUT WRAPPER ==================== -->
@@ -1981,6 +2430,20 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
           <span>Assigned Candidates</span>
         </a>
+        <a href="#" class="sidebar-link" data-page="recruiter-tasks">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          <span>Task Board</span>
+        </a>
+        <a href="#" class="sidebar-link" data-page="recruiter-messages" style="display: none !important;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span>Admin Chat</span>
+          <span class="sidebar-badge chat-badge hidden" id="recruiter-chat-badge" style="background: var(--accent-rose); margin-left: auto;"></span>
+        </a>
+        <a href="#" class="sidebar-link" data-page="recruiter-notifications" style="display: none !important;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span>Notifications</span>
+          <span class="sidebar-badge notification-badge hidden" style="background: var(--accent-indigo); margin-left: auto;"></span>
+        </a>
       </nav>
       
       <div class="sidebar-footer">
@@ -1996,7 +2459,33 @@
       </div>
     </aside>
 
-    <div class="admin-content-area" style="flex:1; height:100vh; overflow-y:auto; padding:40px;">
+    <div class="admin-content-area" style="flex:1; height:100vh; overflow-y:auto; padding:40px; position: relative;">
+      
+      <!-- Notification Dropdown Widget (top right) -->
+      <div class="notification-dropdown-container">
+        <button class="notification-bell-btn" id="recruiter-notification-btn" aria-label="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="bell-badge notification-badge hidden" id="recruiter-notification-badge">0</span>
+        </button>
+        <div class="notification-dropdown glass-panel hidden" id="recruiter-notification-dropdown">
+          <div class="dropdown-header">
+            <h3>Notifications</h3>
+            <div class="dropdown-actions">
+              <a href="#" onclick="event.preventDefault(); markAllNotificationsRead('Recruiter')">Mark all read</a>
+              <a href="#" onclick="event.preventDefault(); clearAllNotifications('Recruiter')">Clear all</a>
+            </div>
+          </div>
+          <div class="dropdown-tabs">
+            <button class="tab-btn active" id="recruiter-notif-filter-all" onclick="filterNotifications('Recruiter', 'all')">All</button>
+            <button class="tab-btn" id="recruiter-notif-filter-unread" onclick="filterNotifications('Recruiter', 'unread')">Unread</button>
+          </div>
+          <div class="dropdown-list" id="recruiter-notifications-list">
+            <!-- Dynamic items -->
+          </div>
+        </div>
+      </div>
       
       <!-- ==================== RECRUITER VIEW 1: DASHBOARD ==================== -->
       <section id="recruiter-dashboard-view" class="view-panel" style="padding: 30px;">
@@ -2109,7 +2598,136 @@
         </div>
       </section>
 
+      <!-- Recruiter Admin Chat View (Legacy full screen - hidden/unused) -->
+      <section id="recruiter-messages-view" class="view-panel hidden"></section>
+
+      <!-- Recruiter Notifications View -->
+      <section id="recruiter-notifications-view" class="view-panel hidden" style="padding: 30px;">
+        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2 class="dashboard-title text-gradient" style="font-size: 1.6rem; font-weight: 700; font-family: 'Outfit', sans-serif;">Your Notifications</h2>
+            <p class="dashboard-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Updates on your assigned candidates, admin instructions, and platform logs</p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn-nav-action secondary" onclick="markAllNotificationsRead('Recruiter')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer;">Mark all as read</button>
+            <button class="btn-nav-action secondary" onclick="clearAllNotifications('Recruiter')" style="padding: 10px 18px; font-size: 0.85rem; cursor: pointer; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.2);">Clear all</button>
+          </div>
+        </div>
+        
+        <div class="notification-filters">
+          <button class="notification-filter-btn active" id="recruiter-notif-filter-all" onclick="filterNotifications('Recruiter', 'all')">All</button>
+          <button class="notification-filter-btn" id="recruiter-notif-filter-unread" onclick="filterNotifications('Recruiter', 'unread')">Unread</button>
+        </div>
+
+        <div class="glass-panel" style="padding: 24px;">
+          <div class="notification-list" id="recruiter-notifications-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== VIEW: RECRUITER TASK BOARD ==================== -->
+      <section id="recruiter-tasks-view" class="view-panel hidden" style="padding: 30px;">
+        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
+          <div>
+            <h2 class="dashboard-title text-gradient" style="font-size: 1.6rem; font-weight: 700; font-family: 'Outfit', sans-serif;">Your Task Board</h2>
+            <p class="dashboard-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Track and update your assigned tasks from management.</p>
+          </div>
+        </div>
+
+        <!-- Task Filters & Controls -->
+        <div class="glass-panel" style="padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+          <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0;">Filter by Priority</label>
+              <select id="recruiter-task-filter-priority" class="form-select" style="background: var(--bg-glass); width: 140px; padding: 6px 12px; height: 36px; margin-top: 0;">
+                <option value="all">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0;">Sort by</label>
+              <select id="recruiter-task-sort-by" class="form-select" style="background: var(--bg-glass); width: 140px; padding: 6px 12px; height: 36px; margin-top: 0;">
+                <option value="dueDate">Due Date</option>
+                <option value="priority">Priority Level</option>
+                <option value="title">Alphabetical</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kanban Board Container -->
+        <div class="kanban-board-container" id="recruiter-kanban-board">
+          <!-- Column: To Do -->
+          <div class="kanban-column" data-status="todo">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">To Do</span>
+              <span class="kanban-column-count" id="recruiter-count-todo">0</span>
+            </div>
+            <div class="kanban-cards-list" id="recruiter-list-todo">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Column: In Progress -->
+          <div class="kanban-column" data-status="inprogress">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">In Progress</span>
+              <span class="kanban-column-count" id="recruiter-count-inprogress">0</span>
+            </div>
+            <div class="kanban-cards-list" id="recruiter-list-inprogress">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Column: Done -->
+          <div class="kanban-column" data-status="done">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title">Done</span>
+              <span class="kanban-column-count" id="recruiter-count-done">0</span>
+            </div>
+            <div class="kanban-cards-list" id="recruiter-list-done">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div> <!-- .admin-content-area -->
+
+    <!-- Floating Recruiter-Admin Chat Widget -->
+    <div class="floating-chat-container" id="recruiter-floating-chat">
+      <!-- Chat Window (hidden by default) -->
+      <div class="floating-chat-window glass-panel hidden" id="recruiter-chat-card">
+        <div class="floating-chat-header">
+          <div class="chat-avatar" style="width: 28px; height: 28px; font-size: 0.75rem;">AD</div>
+          <div class="floating-chat-header-user-info">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">System Administrator</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">Active Operations</div>
+          </div>
+          <button class="floating-chat-close-btn" id="recruiter-chat-close">&times;</button>
+        </div>
+
+        <div class="chat-window-messages" id="recruiter-chat-messages-container">
+          <!-- populated dynamically -->
+        </div>
+        <form class="chat-window-input-area" id="recruiter-chat-form">
+          <input type="text" id="recruiter-chat-input" class="chat-text-input" placeholder="Type a message to Admin..." autocomplete="off">
+          <button type="submit" class="btn-nav-action primary" style="padding: 10px 20px; font-size: 0.85rem; border-radius: var(--radius-sm);">Send</button>
+        </form>
+      </div>
+
+      <!-- Toggle Button -->
+      <button class="floating-chat-toggle-btn" id="recruiter-chat-toggle-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="floating-chat-badge hidden" id="recruiter-chat-badge-floating">0</span>
+      </button>
+    </div>
   </div> <!-- #recruiter-layout-wrapper -->
 
   <!-- ==================== REQUEST DETAIL MODAL ==================== -->
@@ -2160,6 +2778,11 @@
             <option value="Stripe">Stripe</option>
             <option value="Google">Google</option>
           </select>
+        </div>
+        
+        <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+          <input type="checkbox" id="assign-urgent-checkbox" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent-rose);">
+          <label for="assign-urgent-checkbox" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-rose); cursor: pointer; text-transform: uppercase; margin-bottom: 0;">Mark as Urgent Assignment</label>
         </div>
         
         <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
@@ -2265,6 +2888,84 @@
           <button type="submit" class="btn-submit" style="width: auto; padding: 10px 30px;">Send Email</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ==================== CREATE TASK MODAL ==================== -->
+  <div id="create-task-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px;">
+      <button id="close-task-modal-btn" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem; line-height: 1;">&times;</button>
+      
+      <h3 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Create New Task</h3>
+      
+      <form id="create-task-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label class="form-label" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;" for="task-title">Task Title</label>
+          <input type="text" id="task-title" class="form-input" required placeholder="e.g. Call candidates for DataShield Inc." style="background: var(--bg-glass); margin-top: 0;">
+        </div>
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label class="form-label" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;" for="task-desc">Description</label>
+          <textarea id="task-desc" class="form-input" rows="3" placeholder="Provide details about the task..." style="background: var(--bg-glass); resize: vertical; font-family: inherit; margin-top: 0;"></textarea>
+        </div>
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label class="form-label" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;" for="task-assignee">Assign Recruiter</label>
+          <select id="task-assignee" class="form-select" required style="background: var(--bg-glass); height: 42px;">
+            <option value="" disabled selected>Select Recruiter</option>
+            <option value="Sarah Connor">Sarah Connor</option>
+            <option value="Michael Scott">Michael Scott</option>
+            <option value="Harvey Specter">Harvey Specter</option>
+            <option value="Jessica Pearson">Jessica Pearson</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;" for="task-duedate">Due Date</label>
+            <input type="date" id="task-duedate" class="form-input" required style="background: var(--bg-glass); margin-top: 0;">
+          </div>
+          
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;" for="task-priority">Priority</label>
+            <select id="task-priority" class="form-select" required style="background: var(--bg-glass); height: 42px;">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+          <button type="button" class="btn-nav-action secondary" id="cancel-task-btn" style="padding: 8px 16px; cursor: pointer; height: auto; margin: 0;">Cancel</button>
+          <button type="submit" class="btn-nav-action primary" style="padding: 8px 16px; cursor: pointer; height: auto; margin: 0;">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== URGENT ASSIGNMENT POPUP OVERLAY ==================== -->
+  <div id="recruiter-urgent-modal" class="modal-overlay hidden" style="z-index: 10000; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);">
+    <div class="modal-content" style="max-width: 500px; border: 2px solid var(--accent-rose); box-shadow: 0 0 30px rgba(244, 63, 94, 0.4); text-align: center; padding: 35px 25px;">
+      <div style="margin-bottom: 20px; display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: rgba(244, 63, 94, 0.1); color: var(--accent-rose); border: 2px solid rgba(244, 63, 94, 0.3);">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+      <h3 style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; font-family: 'Outfit', sans-serif;">Urgent Assignment Alert!</h3>
+      <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px;">
+        Admin has assigned a candidate to you marked as <strong style="color: var(--accent-rose);">URGENT</strong>. Please review their profile and take immediate action.
+      </p>
+      <div class="glass-panel" style="padding: 16px; margin-bottom: 24px; background: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.1); text-align: left;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Candidate Info</div>
+        <div id="urgent-candidate-name" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Neha Patil</div>
+        <div id="urgent-candidate-details" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">Assigned for DataShield Inc.</div>
+      </div>
+      <div>
+        <button type="button" id="acknowledge-urgent-btn" class="btn-submit" style="background: var(--gradient-rose); box-shadow: 0 0 15px rgba(244, 63, 94, 0.3); border: none; font-weight: 700; padding: 12px 30px; border-radius: var(--radius-sm); font-size: 0.95rem; cursor: pointer; color: white; width: auto; display: inline-block;">Acknowledge Assignment</button>
+      </div>
     </div>
   </div>
 
