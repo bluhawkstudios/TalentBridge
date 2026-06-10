@@ -58,7 +58,16 @@ const state = {
     naukri: { name: "Naukri Job Board API", active: true, apiKey: "nk_auth_901824", description: "Search and retrieve CV databases from Naukri portal.", logo: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #0b2f61; width: 18px; height: 18px;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>` },
     timesjobs: { name: "TimesJobs Recruiter API", active: false, apiKey: "", description: "Access timesjobs premium candidate directory search.", logo: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #e21c24; width: 18px; height: 18px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>` },
     indeed: { name: "Indeed Jobs API", active: false, apiKey: "", description: "Connect Indeed resume search integration.", logo: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #2164f3; width: 18px; height: 18px;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>` }
-  }
+  },
+  notifications: [],
+  chatMessages: [],
+  chatActiveRecruiter: null,
+  tasks: [],
+  acknowledgedAssignments: {},
+  selectedSourcingCandidates: [],
+  selectedTalentCandidates: [],
+  selectedTasks: [],
+  sourcingViewMode: "table"
 };
 
 // Mock Identity and Company details for Sourced CVs
@@ -410,6 +419,36 @@ const elements = {
   adminSimLatency: document.getElementById("admin-sim-latency"),
   adminSimTaxrate: document.getElementById("admin-sim-taxrate"),
 
+  // Chat & Notification Badges
+  adminChatBadge: document.getElementById("admin-chat-badge"),
+  adminNotificationBadge: document.getElementById("admin-notification-badge"),
+  recruiterChatBadge: document.getElementById("recruiter-chat-badge"),
+  recruiterNotificationBadge: document.getElementById("recruiter-notification-badge"),
+  businessNotificationBadge: document.getElementById("business-notification-badge"),
+  candidateNotificationBadge: document.getElementById("candidate-notification-badge"),
+
+  // Views & Lists
+  adminMessagesView: document.getElementById("admin-messages-view"),
+  adminNotificationsView: document.getElementById("admin-notifications-view"),
+  adminChatRecruiterList: document.getElementById("admin-chat-recruiter-list"),
+  adminChatWindow: document.getElementById("admin-chat-window"),
+  
+  recruiterMessagesView: document.getElementById("recruiter-messages-view"),
+  recruiterNotificationsView: document.getElementById("recruiter-notifications-view"),
+  recruiterChatWindow: document.getElementById("recruiter-chat-window"),
+  recruiterChatMessagesContainer: document.getElementById("recruiter-chat-messages-container"),
+  recruiterChatForm: document.getElementById("recruiter-chat-form"),
+  recruiterChatInput: document.getElementById("recruiter-chat-input"),
+
+  candidateNotificationsView: document.getElementById("candidate-notifications-view"),
+  candidateNotificationsList: document.getElementById("candidate-notifications-list"),
+  
+  businessNotificationsView: document.getElementById("business-notifications-view"),
+  businessNotificationsList: document.getElementById("business-notifications-list"),
+  
+  adminNotificationsList: document.getElementById("admin-notifications-list"),
+  recruiterNotificationsList: document.getElementById("recruiter-notifications-list"),
+
   // CV Sourced Page Elements
   adminCVSourcedView: document.getElementById("admin-cv-sourced-view"),
   adminCVSourcedCountIndicator: document.getElementById("admin-cv-sourced-count-indicator"),
@@ -460,7 +499,18 @@ const elements = {
   integrationName: document.getElementById("integration-name"),
   integrationUrl: document.getElementById("integration-url"),
   integrationKey: document.getElementById("integration-key"),
-  cvSourcedSearchBtn: document.getElementById("cv-sourced-search-btn")
+  cvSourcedSearchBtn: document.getElementById("cv-sourced-search-btn"),
+  adminTasksView: document.getElementById("admin-tasks-view"),
+  recruiterTasksView: document.getElementById("recruiter-tasks-view"),
+  createTaskModal: document.getElementById("create-task-modal"),
+  createTaskForm: document.getElementById("create-task-form"),
+  recruiterUrgentModal: document.getElementById("recruiter-urgent-modal"),
+  sourcingTableViewContainer: document.getElementById("sourcing-table-view-container"),
+  sourcingKanbanViewContainer: document.getElementById("sourcing-kanban-view-container"),
+  sourcingBulkActionsPanel: document.getElementById("sourcing-bulk-actions-panel"),
+  talentBulkActionsPanel: document.getElementById("talent-bulk-actions-panel"),
+  taskBulkActionsPanel: document.getElementById("task-bulk-actions-panel"),
+  assignUrgentCheckbox: document.getElementById("assign-urgent-checkbox")
 };
 
 // Global Log Out Logic
@@ -499,7 +549,11 @@ function init() {
   loadCandidateStatuses();
   loadStatusTimelines();
   loadAssignments();
+  loadTasks();
+  loadAcknowledgedAssignments();
   loadIntegrations();
+  loadNotifications();
+  loadChatMessages();
   checkSession();
   loadCandidateProfile();
   loadCompanyProfile();
@@ -683,6 +737,221 @@ function loadImportedCandidates() {
 function saveImportedCandidates() {
   const importedList = candidatesData.filter(c => c.id.startsWith("EXT-"));
   localStorage.setItem("ai_sourcing_imported_candidates", JSON.stringify(importedList));
+}
+
+function loadNotifications() {
+  const stored = localStorage.getItem("ai_sourcing_notifications");
+  if (stored) {
+    try {
+      state.notifications = JSON.parse(stored);
+    } catch (e) {
+      console.error("Failed to parse notifications", e);
+      state.notifications = [];
+    }
+  } else {
+    // Seed default notifications
+    state.notifications = [
+      {
+        id: "notif-seed-1",
+        role: "Admin",
+        user: null,
+        title: "New Sourcing Request",
+        message: "Global Tech Corp. submitted a request for a Senior React Developer.",
+        timestamp: Date.now() - 3600000 * 2, // 2 hours ago
+        isRead: false,
+        type: "info"
+      },
+      {
+        id: "notif-seed-2",
+        role: "Admin",
+        user: null,
+        title: "Candidate Placed",
+        message: "Candidate Sneha Patel has been marked as Joined for Infosys.",
+        timestamp: Date.now() - 3600000 * 5, // 5 hours ago
+        isRead: true,
+        type: "success"
+      },
+      {
+        id: "notif-seed-3",
+        role: "Recruiter",
+        user: "sarah.connor@recruiter.com",
+        title: "New Candidate Assigned",
+        message: "Aarav Mehta has been assigned to you for client DataShield Inc.",
+        timestamp: Date.now() - 3600000 * 3, // 3 hours ago
+        isRead: false,
+        type: "info"
+      },
+      {
+        id: "notif-seed-4",
+        role: "Business",
+        user: "hiring@techcorp.com",
+        title: "Candidate Advanced",
+        message: "Aarav Mehta has advanced to L1 Scheduled for your requirements.",
+        timestamp: Date.now() - 3600000 * 1, // 1 hour ago
+        isRead: false,
+        type: "success"
+      },
+      {
+        id: "notif-seed-5",
+        role: "Candidate",
+        user: "candidate@talentsource.com",
+        title: "Interview Scheduled",
+        message: "An interview has been scheduled with Global Tech Corp on 12th June.",
+        timestamp: Date.now() - 3600000 * 4, // 4 hours ago
+        isRead: false,
+        type: "success"
+      }
+    ];
+    saveNotifications();
+  }
+}
+
+function saveNotifications() {
+  localStorage.setItem("ai_sourcing_notifications", JSON.stringify(state.notifications));
+}
+
+function loadChatMessages() {
+  const stored = localStorage.getItem("ai_sourcing_chat_messages");
+  if (stored) {
+    try {
+      state.chatMessages = JSON.parse(stored);
+    } catch (e) {
+      console.error("Failed to parse chat messages", e);
+      state.chatMessages = [];
+    }
+  } else {
+    // Seed default chat messages
+    state.chatMessages = [
+      {
+        id: "msg-seed-1",
+        sender: "sarah.connor@recruiter.com",
+        recipient: "admin",
+        message: "Hi Admin, I have completed the L1 round for candidate Aarav Mehta. He looks strong in React. Advancing to L2.",
+        timestamp: Date.now() - 3600000 * 2, // 2 hours ago
+        isRead: true
+      },
+      {
+        id: "msg-seed-2",
+        sender: "admin",
+        recipient: "sarah.connor@recruiter.com",
+        message: "Great work Sarah. Please schedule L2 with Global Tech Corp immediately.",
+        timestamp: Date.now() - 3600000 * 1.8, // 1.8 hours ago
+        isRead: true
+      },
+      {
+        id: "msg-seed-3",
+        sender: "harvey.specter@recruiter.com",
+        recipient: "admin",
+        message: "Admin, client Stripe is requesting a salary breakdown for Rohan Das. Can we share it?",
+        timestamp: Date.now() - 3600000 * 5, // 5 hours ago
+        isRead: false
+      },
+      {
+        id: "msg-seed-4",
+        sender: "admin",
+        recipient: "harvey.specter@recruiter.com",
+        message: "Yes Harvey, you can share the Expected CTC fixed component from the profile modal.",
+        timestamp: Date.now() - 3600000 * 4.8,
+        isRead: true
+      }
+    ];
+    saveChatMessages();
+  }
+}
+
+function saveChatMessages() {
+  localStorage.setItem("ai_sourcing_chat_messages", JSON.stringify(state.chatMessages));
+}
+
+function addNotification(role, userEmail, title, message, type = "info") {
+  const notif = {
+    id: "notif-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+    role: role,
+    user: userEmail ? userEmail.toLowerCase() : null,
+    title: title,
+    message: message,
+    timestamp: Date.now(),
+    isRead: false,
+    type: type
+  };
+  state.notifications.unshift(notif);
+  saveNotifications();
+  
+  // Show toast notification
+  showNotificationToast(notif);
+  
+  // Rerender active elements
+  updateNotificationBadges();
+  
+  // If we are currently viewing notifications page, render it
+  if (state.activePage && state.activePage.endsWith("-notifications")) {
+    renderNotificationsPage(state.currentRole, state.currentRole.toLowerCase() + "-notifications-list");
+  }
+}
+
+function showNotificationToast(notif) {
+  // Check if target is correct for logged-in user
+  let isTarget = false;
+  const loggedInEmail = (state.currentUser || "").toLowerCase();
+  
+  if (notif.role === "Admin" && state.currentRole === "Admin") {
+    isTarget = true;
+  } else if (notif.role === "Recruiter" && state.currentRole === "Recruiter" && loggedInEmail === notif.user) {
+    isTarget = true;
+  } else if (notif.role === "Business" && state.currentRole === "Business" && loggedInEmail === notif.user) {
+    isTarget = true;
+  } else if (notif.role === "Candidate" && state.currentRole === "Candidate" && loggedInEmail === notif.user) {
+    isTarget = true;
+  }
+  
+  if (!isTarget) return;
+
+  let toastContainer = document.querySelector(".toast-container");
+  if (!toastContainer) {
+    toastContainer = document.createElement("div");
+    toastContainer.className = "toast-container";
+    document.body.appendChild(toastContainer);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast-notification ${notif.type}`;
+  
+  let iconSvg = "";
+  if (notif.type === "success") {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+  } else if (notif.type === "warning") {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+  } else if (notif.type === "error") {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+  } else if (notif.type === "message") {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+  } else {
+    iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+  }
+
+  toast.innerHTML = `
+    <div class="toast-icon">${iconSvg}</div>
+    <div class="toast-content">
+      <div class="toast-title">${notif.title}</div>
+      <div class="toast-message">${notif.message}</div>
+    </div>
+    <button class="toast-close">&times;</button>
+  `;
+
+  toast.querySelector(".toast-close").addEventListener("click", () => {
+    toast.classList.add("fade-out");
+    setTimeout(() => toast.remove(), 300);
+  });
+
+  toastContainer.appendChild(toast);
+
+  // Auto remove after 4 seconds
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.add("fade-out");
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 4000);
 }
 
 function loadIntegrations() {
@@ -935,6 +1204,10 @@ function getRelativeTime(timestamp) {
 
 // Global Event Listeners
 function setupEventListeners() {
+  setupTaskEventListeners();
+  setupSourcingPipelineEventListeners();
+  setupTalentPoolEventListeners();
+
   // Navigation Logo Click
   elements.navLogo.addEventListener("click", (e) => {
     e.preventDefault();
@@ -1234,12 +1507,29 @@ function setupEventListeners() {
   // Event listener for tab updates (realtime simulation)
   window.addEventListener("storage", (e) => {
     loadRequestsFromStorage();
+    loadNotifications();
+    loadChatMessages();
     renderAllViews();
+    updateNotificationBadges();
+    
+    // Rerender chat or notifications if active
+    const adminCard = document.getElementById("admin-chat-card");
+    if (adminCard && !adminCard.classList.contains("hidden")) renderAdminChat();
+    const recruiterCard = document.getElementById("recruiter-chat-card");
+    if (recruiterCard && !recruiterCard.classList.contains("hidden")) renderRecruiterChat();
   });
 
   // Listening to custom tab syncing in single window
   window.addEventListener("storage_updated", () => {
+    loadNotifications();
+    loadChatMessages();
     renderAllViews();
+    updateNotificationBadges();
+    
+    const adminCard = document.getElementById("admin-chat-card");
+    if (adminCard && !adminCard.classList.contains("hidden")) renderAdminChat();
+    const recruiterCard = document.getElementById("recruiter-chat-card");
+    if (recruiterCard && !recruiterCard.classList.contains("hidden")) renderRecruiterChat();
   });
 
   // Theme Toggle click handler
@@ -1270,12 +1560,23 @@ function setupEventListeners() {
   // Sidebar Links Navigation Click Bindings
   document.querySelectorAll(".sidebar-link").forEach(link => {
     link.addEventListener("click", (e) => {
+      const page = link.dataset.page;
+      if (page === "admin-messages") {
+        e.preventDefault();
+        const adminToggle = document.getElementById("admin-chat-toggle-btn");
+        if (adminToggle) adminToggle.click();
+        return;
+      }
+      if (page === "recruiter-messages") {
+        e.preventDefault();
+        const recruiterToggle = document.getElementById("recruiter-chat-toggle-btn");
+        if (recruiterToggle) recruiterToggle.click();
+        return;
+      }
+
       e.preventDefault();
-      
       document.querySelectorAll(".sidebar-link").forEach(l => l.classList.remove("active"));
       link.classList.add("active");
-      
-      const page = link.dataset.page;
       
       if (page === "candidate-dashboard") {
         navigateTo("candidate-dashboard");
@@ -1295,6 +1596,8 @@ function setupEventListeners() {
         navigateTo("candidate-dashboard");
         const act = document.getElementById("dashboard-activity-panel");
         if (act) act.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (page === "candidate-notifications") {
+        navigateTo("candidate-notifications");
       } else if (page && (page.startsWith("business-") || page.startsWith("admin-") || page.startsWith("recruiter-"))) {
         navigateTo(page);
       }
@@ -1745,16 +2048,41 @@ function setupEventListeners() {
         alert("Please select both a recruiter and a company.");
         return;
       }
-      
+
+      const cand = candidatesData.find(c => c.id === candidateId);
+      const candName = cand ? (candidateMockDetails[candidateId] ? candidateMockDetails[candidateId].name : cand.name) : "Candidate";
+
+      // Reassignment Notification
+      const recruiterNameMap = {
+        "Sarah Connor": "sarah.connor@recruiter.com",
+        "Michael Scott": "michael.scott@recruiter.com",
+        "Harvey Specter": "harvey.specter@recruiter.com",
+        "Jessica Pearson": "jessica.pearson@recruiter.com"
+      };
+
+      const existing = state.assignments[candidateId];
+      if (existing && existing.recruiter !== recruiterName) {
+        const oldRecEmail = recruiterNameMap[existing.recruiter] || "sarah.connor@recruiter.com";
+        addNotification("Recruiter", oldRecEmail, "Candidate Reassigned", `Candidate ${candName} has been reassigned to ${recruiterName}.`, "warning");
+      }
+
+      const isUrgent = elements.assignUrgentCheckbox ? elements.assignUrgentCheckbox.checked : false;
+
       state.assignments[candidateId] = {
         recruiter: recruiterName,
         company: companyName,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        isUrgent: isUrgent
       };
+      
+      if (!state.acknowledgedAssignments) state.acknowledgedAssignments = {};
+      state.acknowledgedAssignments[candidateId] = false;
+      saveAcknowledgedAssignments();
+      
       saveAssignments();
       
-      const cand = candidatesData.find(c => c.id === candidateId);
-      const candName = cand ? (candidateMockDetails[candidateId] ? candidateMockDetails[candidateId].name : cand.name) : "Candidate";
+      const newRecEmail = recruiterNameMap[recruiterName] || "sarah.connor@recruiter.com";
+      addNotification("Recruiter", newRecEmail, "New Candidate Assigned", `Candidate ${candName} has been assigned to you for client ${companyName}.`, "info");
       
       addAdminLog(`Assigned Candidate ${candName} (${candidateId}) to Recruiter ${recruiterName} for ${companyName}`, "info");
       
@@ -1826,6 +2154,114 @@ function setupEventListeners() {
       
       elements.customIntegrationModal.classList.add("hidden");
     });
+  }
+  
+  setupNotificationDropdowns();
+  setupFloatingChats();
+}
+
+function setupNotificationDropdowns() {
+  const roles = ["Candidate", "Business", "Admin", "Recruiter"];
+  roles.forEach(role => {
+    const prefix = role.toLowerCase();
+    const btn = document.getElementById(`${prefix}-notification-btn`);
+    const dropdown = document.getElementById(`${prefix}-notification-dropdown`);
+    
+    if (btn && dropdown) {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        // Close other dropdowns
+        roles.forEach(otherRole => {
+          if (otherRole !== role) {
+            const otherDropdown = document.getElementById(`${otherRole.toLowerCase()}-notification-dropdown`);
+            if (otherDropdown) otherDropdown.classList.add("hidden");
+          }
+        });
+        
+        const isHidden = dropdown.classList.contains("hidden");
+        dropdown.classList.toggle("hidden");
+        
+        if (isHidden) {
+          renderNotificationsPage(role, `${prefix}-notifications-list`);
+        }
+      });
+    }
+  });
+
+  // Close when clicking outside
+  document.addEventListener("click", (e) => {
+    roles.forEach(role => {
+      const prefix = role.toLowerCase();
+      const dropdown = document.getElementById(`${prefix}-notification-dropdown`);
+      if (dropdown && !dropdown.classList.contains("hidden")) {
+        const container = e.target.closest(`.notification-dropdown-container`);
+        if (!container) {
+          dropdown.classList.add("hidden");
+        }
+      }
+    });
+  });
+}
+
+function setupFloatingChats() {
+  // --- ADMIN FLOATING CHAT ---
+  const adminToggle = document.getElementById("admin-chat-toggle-btn");
+  const adminCard = document.getElementById("admin-chat-card");
+  const adminRosterClose = document.getElementById("admin-chat-roster-close");
+
+  if (adminToggle && adminCard) {
+    adminToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isHidden = adminCard.classList.contains("hidden");
+      adminCard.classList.toggle("hidden");
+      adminToggle.classList.toggle("active", isHidden);
+      if (isHidden) {
+        if (state.chatActiveRecruiter) {
+          document.getElementById("admin-chat-roster-view").classList.add("hidden");
+          document.getElementById("admin-chat-thread-view").classList.remove("hidden");
+          renderAdminChat();
+        } else {
+          document.getElementById("admin-chat-roster-view").classList.remove("hidden");
+          document.getElementById("admin-chat-thread-view").classList.add("hidden");
+          renderAdminChat();
+        }
+      }
+    });
+
+    const closeAdmin = (e) => {
+      e.stopPropagation();
+      adminCard.classList.add("hidden");
+      adminToggle.classList.remove("active");
+    };
+
+    if (adminRosterClose) adminRosterClose.addEventListener("click", closeAdmin);
+  }
+
+  // --- RECRUITER FLOATING CHAT ---
+  const recruiterToggle = document.getElementById("recruiter-chat-toggle-btn");
+  const recruiterCard = document.getElementById("recruiter-chat-card");
+  const recruiterClose = document.getElementById("recruiter-chat-close");
+
+  if (recruiterToggle && recruiterCard) {
+    recruiterToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isHidden = recruiterCard.classList.contains("hidden");
+      recruiterCard.classList.toggle("hidden");
+      recruiterToggle.classList.toggle("active", isHidden);
+      if (isHidden) {
+        renderRecruiterChat();
+      }
+    });
+
+    if (recruiterClose) {
+      recruiterClose.addEventListener("click", (e) => {
+        e.stopPropagation();
+        recruiterCard.classList.add("hidden");
+        recruiterToggle.classList.remove("active");
+      });
+    }
   }
 }
 
@@ -2215,6 +2651,10 @@ window.placeHiringRequest = function(candidateId) {
   saveRequestsToStorage();
   addAdminLog(`Placement request ${reqId} created by ${state.currentUser} for Candidate #${candidateId.replace('TB-', 'AIS-')}`, "info");
   
+  // Notifications for hiring request placement
+  addNotification("Admin", null, "New Placement Request", `Business client ${state.currentUser} placed a hiring request for Candidate #${candidateId.replace('TB-', 'AIS-')}.`, "info");
+  addNotification("Business", state.currentUser, "Hiring Request Placed", `Hiring request ${reqId} for candidate #${candidateId.replace('TB-', 'AIS-')} placed successfully.`, "success");
+
   alert(`Hiring request placed successfully for Candidate #${candidateId.replace('TB-', 'AIS-')}. It is currently 'In Process' pending admin fulfillment.`);
   
   navigateTo("business-dashboard");
@@ -2230,6 +2670,24 @@ window.fulfillAdminRequest = function(requestId) {
     saveCandidateStatuses();
     addAdminLog(`Placement request ${requestId} fulfilled by Administrator`, "success");
     saveRequestsToStorage();
+
+    // Trigger notifications for fulfillment
+    addNotification("Admin", null, "Placement Fulfilled", `Placement request ${requestId} fulfilled successfully.`, "success");
+    addNotification("Business", req.client, "Placement Fulfilled", `Hiring request ${requestId} for candidate #${req.candidateId.replace('TB-', 'AIS-')} has been fulfilled.`, "success");
+    addNotification("Candidate", "candidate@talentsource.com", "Hired!", `Congratulations! You have been successfully placed at ${req.client}.`, "success");
+
+    const assignment = state.assignments[req.candidateId];
+    if (assignment) {
+      const recruiterNameMap = {
+        "Sarah Connor": "sarah.connor@recruiter.com",
+        "Michael Scott": "michael.scott@recruiter.com",
+        "Harvey Specter": "harvey.specter@recruiter.com",
+        "Jessica Pearson": "jessica.pearson@recruiter.com"
+      };
+      const recEmail = recruiterNameMap[assignment.recruiter] || "sarah.connor@recruiter.com";
+      addNotification("Recruiter", recEmail, "Placement Fulfilled", `Candidate #${req.candidateId.replace('TB-', 'AIS-')} assigned to you has been placed successfully at ${req.client}.`, "success");
+    }
+
     renderAllViews();
   }
 };
@@ -2242,6 +2700,11 @@ window.rejectAdminRequest = function(requestId) {
     saveCandidateStatuses();
     addAdminLog(`Placement request ${requestId} rejected by Administrator`, "warning");
     saveRequestsToStorage();
+
+    // Trigger notifications for rejection
+    addNotification("Admin", null, "Placement Rejected", `Placement request ${requestId} rejected.`, "warning");
+    addNotification("Business", req.client, "Placement Rejected", `Hiring request ${requestId} for candidate #${req.candidateId.replace('TB-', 'AIS-')} has been rejected.`, "warning");
+
     renderAllViews();
   }
 };
@@ -2441,6 +2904,7 @@ function navigateTo(pageName) {
   if (elements.recruiterLayoutWrapper) {
     if (pageName.startsWith("recruiter-")) {
       elements.recruiterLayoutWrapper.classList.remove("hidden");
+      setTimeout(checkUrgentAlerts, 200);
     } else {
       elements.recruiterLayoutWrapper.classList.add("hidden");
     }
@@ -2448,6 +2912,8 @@ function navigateTo(pageName) {
   if (elements.recruiterDashboardView) elements.recruiterDashboardView.classList.add("hidden");
   if (elements.recruiterCandidatesView) elements.recruiterCandidatesView.classList.add("hidden");
   if (elements.recruiterStatusTimelineView) elements.recruiterStatusTimelineView.classList.add("hidden");
+  if (elements.recruiterMessagesView) elements.recruiterMessagesView.classList.add("hidden");
+  if (elements.recruiterNotificationsView) elements.recruiterNotificationsView.classList.add("hidden");
 
   if (pageName === "home") {
     if (state.currentUser) {
@@ -2493,6 +2959,11 @@ function navigateTo(pageName) {
   } else if (pageName === "admin-system-settings") {
     if (elements.adminSystemSettingsView) {
       elements.adminSystemSettingsView.classList.remove("hidden");
+    }
+  } else if (pageName === "admin-tasks") {
+    if (elements.adminTasksView) {
+      elements.adminTasksView.classList.remove("hidden");
+      renderAdminTasks();
     }
   } else if (pageName === "admin-cv-sourced") {
     if (elements.adminCVSourcedView) {
@@ -2574,6 +3045,11 @@ function navigateTo(pageName) {
       elements.recruiterDashboardView.classList.remove("hidden");
       renderRecruiterDashboard();
     }
+  } else if (pageName === "recruiter-tasks") {
+    if (elements.recruiterTasksView) {
+      elements.recruiterTasksView.classList.remove("hidden");
+      renderRecruiterTasks();
+    }
   } else if (pageName === "recruiter-candidates") {
     if (elements.recruiterCandidatesView) {
       elements.recruiterCandidatesView.classList.remove("hidden");
@@ -2583,6 +3059,36 @@ function navigateTo(pageName) {
     if (elements.recruiterStatusTimelineView) {
       elements.recruiterStatusTimelineView.classList.remove("hidden");
       renderRecruiterTimeline();
+    }
+  } else if (pageName === "admin-messages") {
+    if (elements.adminMessagesView) {
+      elements.adminMessagesView.classList.remove("hidden");
+      renderAdminChat();
+    }
+  } else if (pageName === "admin-notifications") {
+    if (elements.adminNotificationsView) {
+      elements.adminNotificationsView.classList.remove("hidden");
+      renderNotificationsPage("Admin", "admin-notifications-list");
+    }
+  } else if (pageName === "recruiter-messages") {
+    if (elements.recruiterMessagesView) {
+      elements.recruiterMessagesView.classList.remove("hidden");
+      renderRecruiterChat();
+    }
+  } else if (pageName === "recruiter-notifications") {
+    if (elements.recruiterNotificationsView) {
+      elements.recruiterNotificationsView.classList.remove("hidden");
+      renderNotificationsPage("Recruiter", "recruiter-notifications-list");
+    }
+  } else if (pageName === "candidate-notifications") {
+    if (elements.candidateNotificationsView) {
+      elements.candidateNotificationsView.classList.remove("hidden");
+      renderNotificationsPage("Candidate", "candidate-notifications-list");
+    }
+  } else if (pageName === "business-notifications") {
+    if (elements.businessNotificationsView) {
+      elements.businessNotificationsView.classList.remove("hidden");
+      renderNotificationsPage("Business", "business-notifications-list");
     }
   }
 
@@ -2665,6 +3171,7 @@ function updateNavHighlight(pageName) {
 function renderAllViews() {
   const role = state.currentRole;
   const user = state.currentUser;
+  updateNotificationBadges();
 
   // Header display config
   if (user) {
@@ -2755,6 +3262,8 @@ function renderAllViews() {
         renderAdminCVSourced();
       } else if (state.activePage === "admin-status-timeline") {
         renderAdminStatusTimeline();
+      } else if (state.activePage === "admin-tasks") {
+        renderAdminTasks();
       }
     } else if (role === "Recruiter") {
       if (elements.mainHeader) elements.mainHeader.classList.add("hidden");
@@ -2777,6 +3286,8 @@ function renderAllViews() {
         renderRecruiterCandidates();
       } else if (state.activePage === "recruiter-status-timeline") {
         renderRecruiterTimeline();
+      } else if (state.activePage === "recruiter-tasks") {
+        renderRecruiterTasks();
       }
     } else if (role === "Candidate") {
       if (elements.mainHeader) elements.mainHeader.classList.add("hidden");
@@ -3701,7 +4212,11 @@ function renderAdminTalentPool() {
       `;
     }
 
+    const isChecked = state.selectedTalentCandidates.includes(cand.id);
     row.innerHTML = `
+      <td class="table-checkbox-col">
+        <input type="checkbox" class="table-row-checkbox talent-table-checkbox" data-id="${cand.id}" ${isChecked ? 'checked' : ''}>
+      </td>
       <td style="font-weight: 600; color: var(--accent-indigo);">${cand.id}</td>
       <td><strong>${cand.role}</strong><br><span style="font-size:0.75rem; color:var(--text-muted)">${cand.skills.slice(0, 4).join(", ")}</span></td>
       <td>
@@ -3716,6 +4231,22 @@ function renderAdminTalentPool() {
     `;
     container.appendChild(row);
   });
+
+  container.querySelectorAll(".talent-table-checkbox").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const id = chk.dataset.id;
+      if (chk.checked) {
+        if (!state.selectedTalentCandidates.includes(id)) {
+          state.selectedTalentCandidates.push(id);
+        }
+      } else {
+        state.selectedTalentCandidates = state.selectedTalentCandidates.filter(item => item !== id);
+      }
+      updateTalentBulkPanel();
+    });
+  });
+
+  updateTalentBulkPanel();
 }
 
 // Render AD4: Global Interviews Board
@@ -4978,6 +5509,10 @@ window.applyToJob = function(jobId) {
   addActivityLog(`You applied for <strong>${job.role}</strong> at <strong>${job.company}</strong>`, "violet", "file");
   saveCandidateProfile();
   
+  // Trigger notifications
+  addNotification("Admin", null, "New Job Application", `Candidate applied for ${job.role} at ${job.company}.`, "info");
+  addNotification("Candidate", "candidate@talentsource.com", "Application Submitted", `You successfully applied for ${job.role} at ${job.company}.`, "success");
+
   alert(`Application submitted successfully for ${job.role} at ${job.company}. It is 'In Process' pending admin review.`);
   
   renderCandidateOpenings();
@@ -5612,6 +6147,16 @@ function runAiProfileAnalyzer() {
 
 // Render AD6: View Sourced CVs Directory
 function renderAdminCVSourced() {
+  if (state.sourcingViewMode === "kanban") {
+    if (elements.sourcingTableViewContainer) elements.sourcingTableViewContainer.classList.add("hidden");
+    if (elements.sourcingKanbanViewContainer) elements.sourcingKanbanViewContainer.classList.remove("hidden");
+    renderSourcingKanban();
+    return;
+  } else {
+    if (elements.sourcingTableViewContainer) elements.sourcingTableViewContainer.classList.remove("hidden");
+    if (elements.sourcingKanbanViewContainer) elements.sourcingKanbanViewContainer.classList.add("hidden");
+  }
+
   const container = elements.adminCVSourcedListBody;
   if (!container) return;
 
@@ -5755,7 +6300,11 @@ function renderAdminCVSourced() {
       `;
     }
 
+    const isChecked = state.selectedSourcingCandidates.includes(c.id);
     row.innerHTML = `
+      <td class="table-checkbox-col">
+        <input type="checkbox" class="table-row-checkbox sourcing-table-checkbox" data-id="${c.id}" ${isChecked ? 'checked' : ''}>
+      </td>
       <td style="font-weight: 600; color: var(--accent-indigo);">${c.id.replace('TB-', 'AIS-')}</td>
       <td>
         <div style="display:flex; align-items:center;">
@@ -5813,6 +6362,22 @@ function renderAdminCVSourced() {
       navigateTo("admin-status-timeline");
     });
   });
+
+  container.querySelectorAll(".sourcing-table-checkbox").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const id = chk.dataset.id;
+      if (chk.checked) {
+        if (!state.selectedSourcingCandidates.includes(id)) {
+          state.selectedSourcingCandidates.push(id);
+        }
+      } else {
+        state.selectedSourcingCandidates = state.selectedSourcingCandidates.filter(item => item !== id);
+      }
+      updateSourcingBulkPanel();
+    });
+  });
+
+  updateSourcingBulkPanel();
 }
 
 // Show detailed candidate profile popup modal
@@ -6047,6 +6612,32 @@ window.updateCVSourcedStatus = function(candidateId, newStatus) {
   const name = (candidateMockDetails[candidateId] && candidateMockDetails[candidateId].name) || `Candidate #${candidateId.replace('TB-', 'AIS-')}`;
   addAdminLog(`Transitioned status of ${name} to ${newStatus}`, "system");
 
+  // Trigger real-time notifications for status advance (Admin update)
+  addNotification("Admin", null, "Candidate Status Advanced", `Admin updated candidate ${name} (${candidateId.replace('TB-', 'AIS-')}) status to ${newStatus}.`, "success");
+  
+  const bizEmail = state.companyProfile.email || "hiring@techcorp.com";
+  addNotification("Business", bizEmail, "Candidate Status Advanced", `Candidate ${name} status has been updated to ${newStatus}.`, "success");
+
+  addNotification("Candidate", "candidate@talentsource.com", "Pipeline Advanced", `Your application status has been updated to ${newStatus}.`, "info");
+  
+  // Check if status is scheduling an interview
+  if (newStatus.includes("Scheduled")) {
+    handleStatusInterviewScheduling(candidateId, newStatus);
+  }
+
+  // If recruiter is assigned
+  const assignment = state.assignments[candidateId];
+  if (assignment) {
+    const recruiterNameMap = {
+      "Sarah Connor": "sarah.connor@recruiter.com",
+      "Michael Scott": "michael.scott@recruiter.com",
+      "Harvey Specter": "harvey.specter@recruiter.com",
+      "Jessica Pearson": "jessica.pearson@recruiter.com"
+    };
+    const recEmail = recruiterNameMap[assignment.recruiter] || "sarah.connor@recruiter.com";
+    addNotification("Recruiter", recEmail, "Candidate Status Advanced", `Candidate ${name} (${candidateId.replace('TB-', 'AIS-')}) status updated to ${newStatus}.`, "info");
+  }
+
   renderAdminCVSourced();
   renderAdminDashboard();
 };
@@ -6161,6 +6752,10 @@ window.openAssignRecruiterModal = function(candidateId) {
   } else {
     elements.assignRecruiterSelect.value = "";
     elements.assignCompanySelect.value = "";
+  }
+  
+  if (elements.assignUrgentCheckbox) {
+    elements.assignUrgentCheckbox.checked = (existing && existing.isUrgent) ? true : false;
   }
   
   elements.assignRecruiterModal.classList.remove("hidden");
@@ -6883,6 +7478,68 @@ function renderRecruiterTimeline() {
   container.appendChild(wrapper);
 }
 
+function handleStatusInterviewScheduling(candidateId, status) {
+  if (!state.candidateInterviews) state.candidateInterviews = [];
+  if (!state.companyInterviews) state.companyInterviews = [];
+
+  const assignment = state.assignments[candidateId] || { company: "DataShield Inc.", recruiter: "Sarah Connor" };
+  const companyName = assignment.company || "DataShield Inc.";
+  const recruiterName = assignment.recruiter || "Sarah Connor";
+  
+  const cand = candidatesData.find(c => c.id === candidateId);
+  const candName = cand ? (candidateMockDetails[candidateId] ? candidateMockDetails[candidateId].name : cand.name) : "Candidate";
+  const roleName = cand ? cand.role : "Software Developer";
+
+  const daysInFuture = status.includes("L1") ? 2 : (status.includes("L2") ? 5 : 8);
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + daysInFuture);
+  const dateStr = targetDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " • 11:00 AM";
+
+  const candIntId = "INT-" + Math.floor(100 + Math.random() * 900);
+  const newCandInt = {
+    id: candIntId,
+    company: companyName,
+    role: roleName,
+    dateStr: dateStr,
+    typeClass: "logo-acme",
+    logoLetter: companyName.charAt(0).toUpperCase(),
+    badgeText: `${status.split(" ")[0]} Video Call`,
+    badgeClass: "badge-blue",
+    interviewer: `${recruiterName} (Tech Recruiter)`,
+    status: "Scheduled",
+    meetingLink: "https://meet.google.com/abc-defg-hij"
+  };
+  state.candidateInterviews.unshift(newCandInt);
+  localStorage.setItem("ai_sourcing_candidate_interviews", JSON.stringify(state.candidateInterviews));
+
+  const compIntId = "INT-B" + Math.floor(100 + Math.random() * 900);
+  const newCompInt = {
+    id: compIntId,
+    candidateId: candidateId,
+    role: roleName,
+    dateTime: dateStr,
+    type: `${status.split(" ")[0]} Interview`,
+    interviewer: `${recruiterName} (Tech Recruiter)`,
+    status: "Scheduled"
+  };
+  state.companyInterviews.unshift(newCompInt);
+  localStorage.setItem("ai_sourcing_company_interviews", JSON.stringify(state.companyInterviews));
+
+  addNotification("Candidate", "candidate@talentsource.com", "Interview Scheduled", `Your ${status.split(" ")[0]} interview for ${roleName} at ${companyName} has been scheduled for ${dateStr}.`, "success");
+  
+  const bizEmail = state.companyProfile.email || "hiring@techcorp.com";
+  addNotification("Business", bizEmail, "Interview Scheduled", `Interview scheduled for candidate ${candName} (${roleName}) on ${dateStr}.`, "info");
+  
+  const recruiterNameMap = {
+    "Sarah Connor": "sarah.connor@recruiter.com",
+    "Michael Scott": "michael.scott@recruiter.com",
+    "Harvey Specter": "harvey.specter@recruiter.com",
+    "Jessica Pearson": "jessica.pearson@recruiter.com"
+  };
+  const recEmail = recruiterNameMap[recruiterName] || "sarah.connor@recruiter.com";
+  addNotification("Recruiter", recEmail, "Interview Scheduled", `A new ${status.split(" ")[0]} interview is scheduled for ${candName} on ${dateStr}.`, "info");
+}
+
 window.updateRecruiterCandidateStatus = function(candidateId, newStatus) {
   state.candidateStatuses[candidateId] = newStatus;
 
@@ -6907,10 +7564,1526 @@ window.updateRecruiterCandidateStatus = function(candidateId, newStatus) {
   const recruiterName = getCurrentRecruiterName();
   addAdminLog(`Recruiter ${recruiterName} transitioned status of ${name} to ${newStatus}`, "system");
 
+  // Trigger real-time notifications for status advance
+  addNotification("Admin", null, "Candidate Status Advanced", `Recruiter ${recruiterName} advanced candidate ${name} (${candidateId.replace('TB-', 'AIS-')}) to ${newStatus}.`, "success");
+  
+  const bizEmail = state.companyProfile.email || "hiring@techcorp.com";
+  addNotification("Business", bizEmail, "Candidate Status Advanced", `Candidate ${name} has advanced to ${newStatus} for your hiring request.`, "success");
+
+  // Candidates also get a notification (our default candidate)
+  addNotification("Candidate", "candidate@talentsource.com", "Pipeline Advanced", `Your application has been advanced to ${newStatus} by Tech Recruiter ${recruiterName}.`, "info");
+
+  // Check if status is scheduling an interview
+  if (newStatus.includes("Scheduled")) {
+    handleStatusInterviewScheduling(candidateId, newStatus);
+  }
+
   renderRecruiterDashboard();
   renderRecruiterCandidates();
   renderAdminDashboard();
 };
+
+// ==================== NOTIFICATIONS LOGIC & RENDERERS ====================
+
+window.currentNotificationFilters = {
+  Admin: "all",
+  Recruiter: "all",
+  Business: "all",
+  Candidate: "all"
+};
+
+function updateNotificationBadges() {
+  const loggedInEmail = (state.currentUser || "").toLowerCase();
+  
+  // Calculate Admin unread notifications
+  const adminUnread = state.notifications.filter(n => n.role === "Admin" && !n.isRead).length;
+  // Calculate Recruiter unread notifications and messages
+  const recruiterUnread = state.notifications.filter(n => n.role === "Recruiter" && n.user === loggedInEmail && !n.isRead).length;
+  const recruiterUnreadChat = state.chatMessages.filter(m => m.recipient === loggedInEmail && !m.isRead).length;
+  
+  // Calculate Business unread notifications
+  const businessUnread = state.notifications.filter(n => n.role === "Business" && n.user === loggedInEmail && !n.isRead).length;
+  // Calculate Candidate unread notifications
+  const candidateUnread = state.notifications.filter(n => n.role === "Candidate" && n.user === loggedInEmail && !n.isRead).length;
+
+  // Calculate Admin unread chat messages
+  const adminUnreadChat = state.chatMessages.filter(m => m.recipient === "admin" && !m.isRead).length;
+
+  // Toggle badge elements
+  if (elements.adminNotificationBadge) {
+    elements.adminNotificationBadge.textContent = adminUnread > 0 ? adminUnread : "";
+    elements.adminNotificationBadge.classList.toggle("hidden", adminUnread === 0);
+  }
+  if (elements.adminChatBadge) {
+    elements.adminChatBadge.textContent = adminUnreadChat > 0 ? adminUnreadChat : "";
+    elements.adminChatBadge.classList.toggle("hidden", adminUnreadChat === 0);
+  }
+  const adminChatBadgeFloating = document.getElementById("admin-chat-badge-floating");
+  if (adminChatBadgeFloating) {
+    adminChatBadgeFloating.textContent = adminUnreadChat > 0 ? adminUnreadChat : "";
+    adminChatBadgeFloating.classList.toggle("hidden", adminUnreadChat === 0);
+  }
+  if (elements.recruiterNotificationBadge) {
+    elements.recruiterNotificationBadge.textContent = recruiterUnread > 0 ? recruiterUnread : "";
+    elements.recruiterNotificationBadge.classList.toggle("hidden", recruiterUnread === 0);
+  }
+  if (elements.recruiterChatBadge) {
+    elements.recruiterChatBadge.textContent = recruiterUnreadChat > 0 ? recruiterUnreadChat : "";
+    elements.recruiterChatBadge.classList.toggle("hidden", recruiterUnreadChat === 0);
+  }
+  const recruiterChatBadgeFloating = document.getElementById("recruiter-chat-badge-floating");
+  if (recruiterChatBadgeFloating) {
+    recruiterChatBadgeFloating.textContent = recruiterUnreadChat > 0 ? recruiterUnreadChat : "";
+    recruiterChatBadgeFloating.classList.toggle("hidden", recruiterUnreadChat === 0);
+  }
+  if (elements.businessNotificationBadge) {
+    elements.businessNotificationBadge.textContent = businessUnread > 0 ? businessUnread : "";
+    elements.businessNotificationBadge.classList.toggle("hidden", businessUnread === 0);
+  }
+  if (elements.candidateNotificationBadge) {
+    elements.candidateNotificationBadge.textContent = candidateUnread > 0 ? candidateUnread : "";
+    elements.candidateNotificationBadge.classList.toggle("hidden", candidateUnread === 0);
+  }
+}
+
+window.filterNotifications = function(role, filterType) {
+  window.currentNotificationFilters[role] = filterType;
+  
+  // Toggle active class on buttons
+  const prefix = role.toLowerCase();
+  const allBtn = document.getElementById(`${prefix}-notif-filter-all`);
+  const unreadBtn = document.getElementById(`${prefix}-notif-filter-unread`);
+  if (allBtn && unreadBtn) {
+    allBtn.classList.toggle("active", filterType === "all");
+    unreadBtn.classList.toggle("active", filterType === "unread");
+  }
+
+  renderNotificationsPage(role, `${prefix}-notifications-list`);
+};
+
+window.renderNotificationsPage = function(role, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = "";
+  const loggedInEmail = (state.currentUser || "").toLowerCase();
+  
+  // Filter notifications by role and user specific settings
+  let list = state.notifications.filter(n => {
+    if (role === "Admin") {
+      return n.role === "Admin";
+    }
+    return n.role === role && n.user === loggedInEmail;
+  });
+
+  // Apply All / Unread Filter
+  const filterType = window.currentNotificationFilters[role] || "all";
+  if (filterType === "unread") {
+    list = list.filter(n => !n.isRead);
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); padding: 40px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:12px; opacity:0.5;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <p style="font-size:0.85rem;">No ${filterType === "unread" ? "unread " : ""}notifications found.</p>
+      </div>
+    `;
+    return;
+  }
+
+  list.forEach(n => {
+    const item = document.createElement("div");
+    item.className = `notification-item ${n.type} ${!n.isRead ? 'unread' : ''}`;
+    
+    let iconSvg = "";
+    if (n.type === "success") {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    } else if (n.type === "warning") {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+    } else if (n.type === "error") {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+    } else if (n.type === "message") {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+    } else {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+    }
+
+    const timeString = new Date(n.timestamp).toLocaleString();
+    const relativeTime = getRelativeTime(n.timestamp);
+
+    item.innerHTML = `
+      <div class="toast-icon" style="margin-top: 2px;">${iconSvg}</div>
+      <div style="flex:1;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+          <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-primary);">${n.title}</h4>
+          <span style="font-size:0.75rem; color:var(--text-muted);">${relativeTime} (${timeString})</span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.45;">${n.message}</p>
+        ${!n.isRead ? `<a href="#" onclick="event.preventDefault(); markNotificationRead('${n.id}', '${role}')" style="font-size:0.75rem; color:var(--accent-indigo); text-decoration:none; display:inline-block; margin-top:8px; font-weight:600;">Mark as read</a>` : ''}
+      </div>
+      ${!n.isRead ? `<div class="notification-unread-dot"></div>` : ''}
+    `;
+    container.appendChild(item);
+  });
+};
+
+window.markNotificationRead = function(id, role) {
+  const notif = state.notifications.find(n => n.id === id);
+  if (notif) {
+    notif.isRead = true;
+    saveNotifications();
+    updateNotificationBadges();
+    
+    const prefix = role.toLowerCase();
+    renderNotificationsPage(role, `${prefix}-notifications-list`);
+  }
+};
+
+window.markAllNotificationsRead = function(role) {
+  const loggedInEmail = (state.currentUser || "").toLowerCase();
+  state.notifications.forEach(n => {
+    if (role === "Admin" && n.role === "Admin") {
+      n.isRead = true;
+    } else if (n.role === role && n.user === loggedInEmail) {
+      n.isRead = true;
+    }
+  });
+  saveNotifications();
+  updateNotificationBadges();
+  
+  const prefix = role.toLowerCase();
+  renderNotificationsPage(role, `${prefix}-notifications-list`);
+};
+
+window.clearAllNotifications = function(role) {
+  const loggedInEmail = (state.currentUser || "").toLowerCase();
+  if (role === "Admin") {
+    state.notifications = state.notifications.filter(n => n.role !== "Admin");
+  } else {
+    state.notifications = state.notifications.filter(n => !(n.role === role && n.user === loggedInEmail));
+  }
+  saveNotifications();
+  updateNotificationBadges();
+  
+  const prefix = role.toLowerCase();
+  renderNotificationsPage(role, `${prefix}-notifications-list`);
+};
+
+// ==================== INTERNAL MESSAGING LOGIC & RENDERERS ====================
+
+function renderAdminChat() {
+  const container = elements.adminChatRecruiterList;
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const recruiters = [
+    { name: "Sarah Connor", email: "sarah.connor@recruiter.com", initials: "SC" },
+    { name: "Michael Scott", email: "michael.scott@recruiter.com", initials: "MS" },
+    { name: "Harvey Specter", email: "harvey.specter@recruiter.com", initials: "HS" },
+    { name: "Jessica Pearson", email: "jessica.pearson@recruiter.com", initials: "JP" }
+  ];
+
+  recruiters.forEach(r => {
+    const item = document.createElement("div");
+    item.className = `roster-item ${state.chatActiveRecruiter === r.email.toLowerCase() ? 'active' : ''}`;
+    
+    // Find unread count for this recruiter's messages to Admin
+    const unreadCount = state.chatMessages.filter(m => m.sender === r.email && m.recipient === "admin" && !m.isRead).length;
+    // Find last message preview
+    const threadMsgs = state.chatMessages.filter(m => 
+      (m.sender === r.email && m.recipient === "admin") || 
+      (m.sender === "admin" && m.recipient === r.email)
+    );
+    const lastMsg = threadMsgs[threadMsgs.length - 1];
+    const previewText = lastMsg ? lastMsg.message : "No conversation history";
+
+    item.innerHTML = `
+      <div class="chat-avatar">
+        ${r.initials}
+        <div class="status-dot"></div>
+      </div>
+      <div class="chat-item-info">
+        <div class="chat-item-name">
+          <span>${r.name}</span>
+          ${unreadCount > 0 ? `<span class="chat-badge">${unreadCount}</span>` : ''}
+        </div>
+        <div class="chat-item-preview">${previewText}</div>
+      </div>
+    `;
+
+    item.addEventListener("click", () => {
+      state.chatActiveRecruiter = r.email.toLowerCase();
+      
+      // Mark messages as read
+      state.chatMessages.forEach(m => {
+        if (m.sender === r.email && m.recipient === "admin") {
+          m.isRead = true;
+        }
+      });
+      saveChatMessages();
+      updateNotificationBadges();
+      
+      renderAdminChat();
+      openAdminChatWindow(r);
+    });
+
+    container.appendChild(item);
+  });
+
+  // If there is an active recruiter selected, open the thread
+  if (state.chatActiveRecruiter) {
+    const activeRec = recruiters.find(r => r.email.toLowerCase() === state.chatActiveRecruiter);
+    if (activeRec) {
+      openAdminChatWindow(activeRec);
+    }
+  }
+}
+
+function openAdminChatWindow(recruiter) {
+  const windowContainer = elements.adminChatWindow;
+  if (!windowContainer) return;
+
+  const rosterView = document.getElementById("admin-chat-roster-view");
+  const threadView = document.getElementById("admin-chat-thread-view");
+  if (rosterView && threadView) {
+    rosterView.classList.add("hidden");
+    threadView.classList.remove("hidden");
+  }
+
+  // Filter messages
+  const threadMsgs = state.chatMessages.filter(m => 
+    (m.sender === recruiter.email && m.recipient === "admin") || 
+    (m.sender === "admin" && m.recipient === recruiter.email)
+  );
+
+  windowContainer.innerHTML = `
+    <div class="chat-window-header" style="padding: 10px 14px; gap: 8px;">
+      <button class="floating-chat-back-btn" id="admin-chat-thread-back" style="margin-right: 4px;">&larr;</button>
+      <div class="chat-avatar" style="width: 30px; height: 30px; font-size: 0.8rem;">
+        ${recruiter.initials}
+        <div class="status-dot" style="width: 8px; height: 8px;"></div>
+      </div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); font-family: 'Outfit', sans-serif;">${recruiter.name}</div>
+        <div style="font-size: 0.7rem; color: var(--text-muted);">Online</div>
+      </div>
+      <button class="floating-chat-close-btn" id="admin-chat-thread-close">&times;</button>
+    </div>
+    
+    <div class="chat-window-messages" id="admin-chat-messages-container" style="flex: 1; min-height: 0; height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+      <!-- Chat bubbles -->
+    </div>
+    
+    <form class="chat-window-input-area" id="admin-chat-form" style="padding: 8px 12px; border-top: 1px solid var(--border-glass);">
+      <input type="text" id="admin-chat-input" class="chat-text-input" placeholder="Type a message..." autocomplete="off" style="height: 32px; font-size: 0.82rem;">
+      <button type="submit" class="btn-nav-action primary" style="padding: 6px 12px; font-size: 0.75rem; border-radius: var(--radius-sm); height: 32px;">Send</button>
+    </form>
+  `;
+
+  // Render Bubbles
+  const bubblesContainer = document.getElementById("admin-chat-messages-container");
+  renderChatBubbles(threadMsgs, bubblesContainer, "admin");
+
+  // Wire input send
+  const chatForm = document.getElementById("admin-chat-form");
+  const chatInput = document.getElementById("admin-chat-input");
+  chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = chatInput.value.trim();
+    if (!val) return;
+
+    sendChatMessage("admin", recruiter.email, val);
+    chatInput.value = "";
+    
+    // Rerender chat window
+    openAdminChatWindow(recruiter);
+    renderAdminChat();
+  });
+
+  // Wire back button
+  const backBtn = document.getElementById("admin-chat-thread-back");
+  if (backBtn) {
+    backBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.chatActiveRecruiter = null;
+      if (rosterView && threadView) {
+        rosterView.classList.remove("hidden");
+        threadView.classList.add("hidden");
+      }
+      renderAdminChat();
+    });
+  }
+
+  // Wire close button
+  const closeBtn = document.getElementById("admin-chat-thread-close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const adminCard = document.getElementById("admin-chat-card");
+      const adminToggle = document.getElementById("admin-chat-toggle-btn");
+      if (adminCard && adminToggle) {
+        adminCard.classList.add("hidden");
+        adminToggle.classList.remove("active");
+      }
+    });
+  }
+}
+
+function renderRecruiterChat() {
+  const windowContainer = elements.recruiterChatMessagesContainer;
+  const inputForm = elements.recruiterChatForm;
+  if (!windowContainer || !inputForm) return;
+
+  const recruiterEmail = (state.currentUser || "sarah.connor@recruiter.com").toLowerCase();
+
+  // Mark incoming messages from admin as read
+  state.chatMessages.forEach(m => {
+    if (m.sender === "admin" && m.recipient === recruiterEmail) {
+      m.isRead = true;
+    }
+  });
+  saveChatMessages();
+  updateNotificationBadges();
+
+  // Filter messages
+  const threadMsgs = state.chatMessages.filter(m => 
+    (m.sender === recruiterEmail && m.recipient === "admin") || 
+    (m.sender === "admin" && m.recipient === recruiterEmail)
+  );
+
+  renderChatBubbles(threadMsgs, windowContainer, recruiterEmail);
+
+  // Clear previous listeners by replacing form element (cloning)
+  const newForm = inputForm.cloneNode(true);
+  inputForm.parentNode.replaceChild(newForm, inputForm);
+  elements.recruiterChatForm = newForm;
+  elements.recruiterChatInput = newForm.querySelector("#recruiter-chat-input");
+
+  elements.recruiterChatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = elements.recruiterChatInput;
+    const val = input.value.trim();
+    if (!val) return;
+
+    sendChatMessage(recruiterEmail, "admin", val);
+    input.value = "";
+    
+    renderRecruiterChat();
+  });
+}
+
+function renderChatBubbles(msgs, container, localUser) {
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (msgs.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; color:var(--text-muted); margin-top:40px; font-size:0.85rem;">
+        No message history. Start typing below to begin conversation.
+      </div>
+    `;
+    return;
+  }
+
+  msgs.forEach(m => {
+    const isSent = m.sender === localUser;
+    const bubbleContainer = document.createElement("div");
+    bubbleContainer.className = `chat-bubble-container ${isSent ? 'sent' : 'received'}`;
+
+    const timeString = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const senderLabel = isSent ? "You" : (m.sender === "admin" ? "Admin" : recruiterEmailMap[m.sender] || "Recruiter");
+
+    bubbleContainer.innerHTML = `
+      <span class="chat-bubble-sender">${senderLabel}</span>
+      <div class="chat-text-bubble">${m.message}</div>
+      <span class="chat-bubble-time">${timeString}</span>
+    `;
+
+    container.appendChild(bubbleContainer);
+  });
+
+  // Scroll to bottom
+  setTimeout(() => {
+    container.scrollTop = container.scrollHeight;
+  }, 50);
+}
+
+function sendChatMessage(sender, recipient, messageText) {
+  const msg = {
+    id: "msg-" + Date.now(),
+    sender: sender.toLowerCase(),
+    recipient: recipient.toLowerCase(),
+    message: messageText,
+    timestamp: Date.now(),
+    isRead: false
+  };
+  state.chatMessages.push(msg);
+  saveChatMessages();
+  
+  // Trigger notification for recipient!
+  if (recipient === "admin") {
+    addNotification("Admin", null, `Recruiter Msg`, `New message from ${getCurrentRecruiterName()}`, "message");
+  } else {
+    addNotification("Recruiter", recipient, "Chat from Admin", "You have a new message from System Administrator.", "message");
+  }
+  
+  // Dispatch updated storage event for cross-tab updates
+  window.dispatchEvent(new Event("storage_updated"));
+}
+
+/* ==================== TASKS, URGENT ALERTS & BULK ACTIONS SYSTEM ==================== */
+
+function loadTasks() {
+  const stored = localStorage.getItem("ai_sourcing_tasks");
+  if (stored) {
+    try {
+      state.tasks = JSON.parse(stored);
+    } catch (e) {
+      console.error("Failed to parse tasks", e);
+      state.tasks = [];
+    }
+  } else {
+    state.tasks = [];
+  }
+  
+  if (state.tasks.length === 0) {
+    seedDefaultTasks();
+  }
+}
+
+function saveTasks() {
+  localStorage.setItem("ai_sourcing_tasks", JSON.stringify(state.tasks));
+  window.dispatchEvent(new Event("storage_updated"));
+}
+
+function loadAcknowledgedAssignments() {
+  const stored = localStorage.getItem("ai_sourcing_acknowledged_assignments");
+  if (stored) {
+    try {
+      state.acknowledgedAssignments = JSON.parse(stored);
+    } catch (e) {
+      console.error("Failed to parse acknowledged assignments", e);
+      state.acknowledgedAssignments = {};
+    }
+  } else {
+    state.acknowledgedAssignments = {};
+  }
+}
+
+function saveAcknowledgedAssignments() {
+  localStorage.setItem("ai_sourcing_acknowledged_assignments", JSON.stringify(state.acknowledgedAssignments));
+  window.dispatchEvent(new Event("storage_updated"));
+}
+
+function seedDefaultTasks() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+  const inTwoDays = new Date();
+  inTwoDays.setDate(inTwoDays.getDate() + 2);
+  const inTwoDaysStr = inTwoDays.toISOString().split('T')[0];
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  state.tasks = [
+    {
+      id: "task-1",
+      title: "Review candidate profiles for DataShield Inc.",
+      description: "Filter and shortlist L1 candidates matching the data security specialist requirement.",
+      assignedRecruiter: "Sarah Connor",
+      dueDate: tomorrowStr,
+      priority: "high",
+      status: "todo",
+      timestamp: Date.now() - 3600000 * 5
+    },
+    {
+      id: "task-2",
+      title: "Schedule L1 interviews for Aarav Mehta",
+      description: "Reach out to Aarav and set up a technical panel assessment.",
+      assignedRecruiter: "Sarah Connor",
+      dueDate: inTwoDaysStr,
+      priority: "medium",
+      status: "inprogress",
+      timestamp: Date.now() - 3600000 * 24
+    },
+    {
+      id: "task-3",
+      title: "Follow up on Wipro offer letters",
+      description: "Review benefits and CTC breakdown details with candidates.",
+      assignedRecruiter: "Michael Scott",
+      dueDate: yesterdayStr,
+      priority: "low",
+      status: "done",
+      timestamp: Date.now() - 3600000 * 48
+    },
+    {
+      id: "task-4",
+      title: "Call Harvey Specter's executive candidates",
+      description: "Conduct initial alignment calls with executive talent pipeline.",
+      assignedRecruiter: "Harvey Specter",
+      dueDate: todayStr,
+      priority: "high",
+      status: "todo",
+      timestamp: Date.now() - 3600000 * 2
+    }
+  ];
+  saveTasks();
+}
+
+function checkUrgentAlerts() {
+  if (state.currentRole !== "Recruiter") return;
+  const recruiterName = getCurrentRecruiterName();
+  
+  for (const candidateId in state.assignments) {
+    const assignment = state.assignments[candidateId];
+    if (assignment && assignment.recruiter === recruiterName && assignment.isUrgent) {
+      if (!state.acknowledgedAssignments || !state.acknowledgedAssignments[candidateId]) {
+        const candidate = candidatesData.find(c => c.id === candidateId);
+        const candName = candidate ? (candidateMockDetails[candidateId] ? candidateMockDetails[candidateId].name : candidate.name) : candidateId;
+        const comp = assignment.company || "Assigned Client";
+        
+        const nameEl = document.getElementById("urgent-candidate-name");
+        const detailsEl = document.getElementById("urgent-candidate-details");
+        const modalEl = document.getElementById("recruiter-urgent-modal");
+        const ackBtn = document.getElementById("acknowledge-urgent-btn");
+        
+        if (nameEl) nameEl.textContent = candName;
+        if (detailsEl) detailsEl.textContent = `Assigned for ${comp}`;
+        
+        if (modalEl) {
+          modalEl.classList.remove("hidden");
+          
+          if (ackBtn) {
+            const newAckBtn = ackBtn.cloneNode(true);
+            ackBtn.parentNode.replaceChild(newAckBtn, ackBtn);
+            newAckBtn.addEventListener("click", () => {
+              if (!state.acknowledgedAssignments) state.acknowledgedAssignments = {};
+              state.acknowledgedAssignments[candidateId] = true;
+              saveAcknowledgedAssignments();
+              modalEl.classList.add("hidden");
+              checkUrgentAlerts(); // Re-run to check for next alert if any
+            });
+          }
+        }
+        break; // Show one at a time
+      }
+    }
+  }
+}
+
+function renderAdminTasks() {
+  const recruiterFilter = document.getElementById("task-filter-recruiter")?.value || "all";
+  const priorityFilter = document.getElementById("task-filter-priority")?.value || "all";
+  const sortBy = document.getElementById("task-sort-by")?.value || "dueDate";
+
+  let filtered = [...state.tasks];
+
+  if (recruiterFilter !== "all") {
+    filtered = filtered.filter(t => t.assignedRecruiter === recruiterFilter);
+  }
+  if (priorityFilter !== "all") {
+    filtered = filtered.filter(t => t.priority === priorityFilter);
+  }
+
+  const priorityWeight = { high: 3, medium: 2, low: 1 };
+  filtered.sort((a, b) => {
+    if (sortBy === "dueDate") {
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    } else if (sortBy === "priority") {
+      return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+    } else if (sortBy === "title") {
+      return a.title.localeCompare(b.title);
+    }
+    return 0;
+  });
+
+  const columns = {
+    todo: document.getElementById("list-todo"),
+    inprogress: document.getElementById("list-inprogress"),
+    done: document.getElementById("list-done")
+  };
+
+  const counts = {
+    todo: document.getElementById("count-todo"),
+    inprogress: document.getElementById("count-inprogress"),
+    done: document.getElementById("count-done")
+  };
+
+  for (const status in columns) {
+    if (columns[status]) columns[status].innerHTML = "";
+    if (counts[status]) counts[status].textContent = "0";
+  }
+
+  const statusCounts = { todo: 0, inprogress: 0, done: 0 };
+
+  filtered.forEach(task => {
+    const status = task.status || "todo";
+    statusCounts[status]++;
+    const col = columns[status];
+    if (!col) return;
+
+    const initials = task.assignedRecruiter
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase();
+
+    const isChecked = state.selectedTasks.includes(task.id);
+
+    const card = document.createElement("div");
+    card.className = "kanban-card";
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <input type="checkbox" class="table-row-checkbox task-card-checkbox" data-id="${task.id}" ${isChecked ? 'checked' : ''} style="margin-top: 4px;">
+        <span class="kanban-card-priority ${task.priority}">${task.priority}</span>
+      </div>
+      <div class="kanban-card-title">${task.title}</div>
+      <div class="kanban-card-subtitle">${task.description || ''}</div>
+      <div class="kanban-card-footer">
+        <div class="kanban-card-user">
+          <div class="kanban-card-user-avatar" title="${task.assignedRecruiter}">${initials}</div>
+          <span style="font-size:0.75rem; color:var(--text-secondary);">${task.dueDate ? 'Due: ' + task.dueDate : ''}</span>
+        </div>
+        <div class="kanban-card-actions">
+          ${status !== "todo" ? `<button type="button" class="kanban-card-action-btn move-prev" data-id="${task.id}" title="Move back">&larr;</button>` : ''}
+          ${status !== "done" ? `<button type="button" class="kanban-card-action-btn move-next" data-id="${task.id}" title="Move forward">&rarr;</button>` : ''}
+          <button type="button" class="kanban-card-action-btn delete-task" data-id="${task.id}" style="color: var(--accent-rose);" title="Delete task">&times;</button>
+        </div>
+      </div>
+    `;
+    col.appendChild(card);
+  });
+
+  for (const status in counts) {
+    if (counts[status]) counts[status].textContent = statusCounts[status].toString();
+  }
+
+  // Bind actions
+  document.querySelectorAll(".move-prev").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      moveTaskStatus(id, -1);
+    });
+  });
+
+  document.querySelectorAll(".move-next").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      moveTaskStatus(id, 1);
+    });
+  });
+
+  document.querySelectorAll(".delete-task").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      deleteSingleTask(id);
+    });
+  });
+
+  document.querySelectorAll(".task-card-checkbox").forEach(chk => {
+    chk.addEventListener("change", (e) => {
+      const id = chk.dataset.id;
+      if (chk.checked) {
+        if (!state.selectedTasks.includes(id)) state.selectedTasks.push(id);
+      } else {
+        state.selectedTasks = state.selectedTasks.filter(item => item !== id);
+      }
+      updateTaskBulkPanel();
+    });
+  });
+
+  updateTaskBulkPanel();
+}
+
+function renderRecruiterTasks() {
+  const recruiterName = getCurrentRecruiterName();
+  const priorityFilter = document.getElementById("recruiter-task-filter-priority")?.value || "all";
+  const sortBy = document.getElementById("recruiter-task-sort-by")?.value || "dueDate";
+
+  let filtered = state.tasks.filter(t => t.assignedRecruiter === recruiterName);
+
+  if (priorityFilter !== "all") {
+    filtered = filtered.filter(t => t.priority === priorityFilter);
+  }
+
+  const priorityWeight = { high: 3, medium: 2, low: 1 };
+  filtered.sort((a, b) => {
+    if (sortBy === "dueDate") {
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    } else if (sortBy === "priority") {
+      return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+    } else if (sortBy === "title") {
+      return a.title.localeCompare(b.title);
+    }
+    return 0;
+  });
+
+  const columns = {
+    todo: document.getElementById("recruiter-list-todo"),
+    inprogress: document.getElementById("recruiter-list-inprogress"),
+    done: document.getElementById("recruiter-list-done")
+  };
+
+  const counts = {
+    todo: document.getElementById("recruiter-count-todo"),
+    inprogress: document.getElementById("recruiter-count-inprogress"),
+    done: document.getElementById("recruiter-count-done")
+  };
+
+  for (const status in columns) {
+    if (columns[status]) columns[status].innerHTML = "";
+    if (counts[status]) counts[status].textContent = "0";
+  }
+
+  const statusCounts = { todo: 0, inprogress: 0, done: 0 };
+
+  filtered.forEach(task => {
+    const status = task.status || "todo";
+    statusCounts[status]++;
+    const col = columns[status];
+    if (!col) return;
+
+    const card = document.createElement("div");
+    card.className = "kanban-card";
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <span class="kanban-card-priority ${task.priority}">${task.priority}</span>
+      </div>
+      <div class="kanban-card-title">${task.title}</div>
+      <div class="kanban-card-subtitle">${task.description || ''}</div>
+      <div class="kanban-card-footer">
+        <div class="kanban-card-user">
+          <span style="font-size:0.75rem; color:var(--text-secondary);">${task.dueDate ? 'Due: ' + task.dueDate : ''}</span>
+        </div>
+        <div class="kanban-card-actions">
+          ${status !== "todo" ? `<button type="button" class="kanban-card-action-btn recruiter-move-prev" data-id="${task.id}" title="Move back">&larr;</button>` : ''}
+          ${status !== "done" ? `<button type="button" class="kanban-card-action-btn recruiter-move-next" data-id="${task.id}" title="Move forward">&rarr;</button>` : ''}
+        </div>
+      </div>
+    `;
+    col.appendChild(card);
+  });
+
+  for (const status in counts) {
+    if (counts[status]) counts[status].textContent = statusCounts[status].toString();
+  }
+
+  document.querySelectorAll(".recruiter-move-prev").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      moveTaskStatus(id, -1);
+    });
+  });
+
+  document.querySelectorAll(".recruiter-move-next").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      moveTaskStatus(id, 1);
+    });
+  });
+}
+
+function moveTaskStatus(taskId, direction) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  const statuses = ["todo", "inprogress", "done"];
+  const currentIndex = statuses.indexOf(task.status);
+  const newIndex = currentIndex + direction;
+
+  if (newIndex >= 0 && newIndex < statuses.length) {
+    task.status = statuses[newIndex];
+    saveTasks();
+    if (state.currentRole === "Admin") {
+      renderAdminTasks();
+    } else {
+      renderRecruiterTasks();
+    }
+  }
+}
+
+function deleteSingleTask(taskId) {
+  if (confirm("Are you sure you want to delete this task?")) {
+    state.tasks = state.tasks.filter(t => t.id !== taskId);
+    state.selectedTasks = state.selectedTasks.filter(id => id !== taskId);
+    saveTasks();
+    renderAdminTasks();
+  }
+}
+
+function updateTaskBulkPanel() {
+  const panel = elements.taskBulkActionsPanel;
+  const countEl = document.getElementById("task-bulk-count");
+  if (!panel || !countEl) return;
+
+  const count = state.selectedTasks.length;
+  if (count > 0) {
+    countEl.textContent = count.toString();
+    panel.classList.remove("hidden");
+  } else {
+    panel.classList.add("hidden");
+  }
+}
+
+function setupTaskEventListeners() {
+  const openModalBtn = document.getElementById("admin-create-task-btn");
+  if (openModalBtn) {
+    openModalBtn.addEventListener("click", () => {
+      if (elements.createTaskModal) {
+        elements.createTaskModal.classList.remove("hidden");
+        const today = new Date().toISOString().split("T")[0];
+        const dateInput = document.getElementById("task-duedate");
+        if (dateInput) dateInput.value = today;
+      }
+    });
+  }
+
+  const closeModalBtn = document.getElementById("close-task-modal-btn");
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener("click", () => {
+      elements.createTaskModal.classList.add("hidden");
+    });
+  }
+
+  const cancelModalBtn = document.getElementById("cancel-task-btn");
+  if (cancelModalBtn) {
+    cancelModalBtn.addEventListener("click", () => {
+      elements.createTaskModal.classList.add("hidden");
+    });
+  }
+
+  const form = elements.createTaskForm;
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById("task-title").value.trim();
+      const description = document.getElementById("task-desc").value.trim();
+      const assignedRecruiter = document.getElementById("task-assignee").value;
+      const dueDate = document.getElementById("task-duedate").value;
+      const priority = document.getElementById("task-priority").value;
+
+      if (!title || !assignedRecruiter || !dueDate) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+
+      const newTask = {
+        id: "task-" + Date.now(),
+        title,
+        description,
+        assignedRecruiter,
+        dueDate,
+        priority,
+        status: "todo",
+        timestamp: Date.now()
+      };
+
+      state.tasks.push(newTask);
+      saveTasks();
+      form.reset();
+
+      elements.createTaskModal.classList.add("hidden");
+      renderAdminTasks();
+    });
+  }
+
+  ["task-filter-recruiter", "task-filter-priority", "task-sort-by"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", () => {
+        renderAdminTasks();
+      });
+    }
+  });
+
+  ["recruiter-task-filter-priority", "recruiter-task-sort-by"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", () => {
+        renderRecruiterTasks();
+      });
+    }
+  });
+
+  const bulkMoveBtn = document.getElementById("bulk-task-move-btn");
+  if (bulkMoveBtn) {
+    bulkMoveBtn.addEventListener("click", () => {
+      const statusSelect = document.getElementById("bulk-task-status-select");
+      const newStatus = statusSelect ? statusSelect.value : "";
+      if (!newStatus) {
+        alert("Please select a status to move tasks to.");
+        return;
+      }
+
+      state.tasks = state.tasks.map(t => {
+        if (state.selectedTasks.includes(t.id)) {
+          return { ...t, status: newStatus };
+        }
+        return t;
+      });
+
+      state.selectedTasks = [];
+      saveTasks();
+      renderAdminTasks();
+    });
+  }
+
+  const bulkDeleteBtn = document.getElementById("bulk-task-delete-btn");
+  if (bulkDeleteBtn) {
+    bulkDeleteBtn.addEventListener("click", () => {
+      if (state.selectedTasks.length === 0) return;
+      if (confirm(`Are you sure you want to delete ${state.selectedTasks.length} tasks?`)) {
+        state.tasks = state.tasks.filter(t => !state.selectedTasks.includes(t.id));
+        state.selectedTasks = [];
+        saveTasks();
+        renderAdminTasks();
+      }
+    });
+  }
+
+  const bulkClearBtn = document.getElementById("bulk-task-clear-btn");
+  if (bulkClearBtn) {
+    bulkClearBtn.addEventListener("click", () => {
+      state.selectedTasks = [];
+      renderAdminTasks();
+    });
+  }
+}
+
+function updateSourcingBulkPanel() {
+  const panel = elements.sourcingBulkActionsPanel;
+  const countEl = document.getElementById("sourcing-bulk-count");
+  if (!panel || !countEl) return;
+
+  const count = state.selectedSourcingCandidates.length;
+  if (count > 0) {
+    countEl.textContent = count.toString();
+    panel.classList.remove("hidden");
+  } else {
+    panel.classList.add("hidden");
+  }
+}
+
+function updateTalentBulkPanel() {
+  const panel = elements.talentBulkActionsPanel;
+  const countEl = document.getElementById("talent-bulk-count");
+  if (!panel || !countEl) return;
+
+  const count = state.selectedTalentCandidates.length;
+  if (count > 0) {
+    countEl.textContent = count.toString();
+    panel.classList.remove("hidden");
+  } else {
+    panel.classList.add("hidden");
+  }
+}
+
+function setupSourcingPipelineEventListeners() {
+  const tableBtn = document.getElementById("sourcing-view-table-btn");
+  const kanbanBtn = document.getElementById("sourcing-view-kanban-btn");
+
+  if (tableBtn && kanbanBtn) {
+    tableBtn.addEventListener("click", () => {
+      state.sourcingViewMode = "table";
+      tableBtn.classList.add("active");
+      kanbanBtn.classList.remove("active");
+      renderAdminCVSourced();
+    });
+
+    kanbanBtn.addEventListener("click", () => {
+      state.sourcingViewMode = "kanban";
+      kanbanBtn.classList.add("active");
+      tableBtn.classList.remove("active");
+      renderAdminCVSourced();
+    });
+  }
+
+  const headerCheckbox = document.getElementById("cv-sourced-header-checkbox");
+  if (headerCheckbox) {
+    headerCheckbox.addEventListener("change", () => {
+      const isChecked = headerCheckbox.checked;
+      const visibleCheckboxes = document.querySelectorAll(".sourcing-table-checkbox");
+      
+      visibleCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+        const id = chk.dataset.id;
+        if (isChecked) {
+          if (!state.selectedSourcingCandidates.includes(id)) {
+            state.selectedSourcingCandidates.push(id);
+          }
+        } else {
+          state.selectedSourcingCandidates = state.selectedSourcingCandidates.filter(item => item !== id);
+        }
+      });
+      updateSourcingBulkPanel();
+    });
+  }
+
+  const sourcingSelectAllCheckbox = document.getElementById("sourcing-select-all-checkbox");
+  if (sourcingSelectAllCheckbox) {
+    sourcingSelectAllCheckbox.addEventListener("change", () => {
+      const isChecked = sourcingSelectAllCheckbox.checked;
+      const visibleCheckboxes = document.querySelectorAll(".sourcing-kanban-checkbox, .sourcing-table-checkbox");
+      
+      visibleCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+        const id = chk.dataset.id;
+        if (isChecked) {
+          if (!state.selectedSourcingCandidates.includes(id)) {
+            state.selectedSourcingCandidates.push(id);
+          }
+        } else {
+          state.selectedSourcingCandidates = state.selectedSourcingCandidates.filter(item => item !== id);
+        }
+      });
+      updateSourcingBulkPanel();
+    });
+  }
+
+  const bulkAssignBtn = document.getElementById("bulk-sourcing-assign-btn");
+  if (bulkAssignBtn) {
+    bulkAssignBtn.addEventListener("click", () => {
+      const recruiterName = document.getElementById("bulk-sourcing-recruiter-select")?.value;
+      const companyName = document.getElementById("bulk-sourcing-company-select")?.value;
+
+      if (!recruiterName || !companyName) {
+        alert("Please select both a recruiter and a client.");
+        return;
+      }
+
+      const recruiterNameMap = {
+        "Sarah Connor": "sarah.connor@recruiter.com",
+        "Michael Scott": "michael.scott@recruiter.com",
+        "Harvey Specter": "harvey.specter@recruiter.com",
+        "Jessica Pearson": "jessica.pearson@recruiter.com"
+      };
+
+      state.selectedSourcingCandidates.forEach(candidateId => {
+        const cand = candidatesData.find(c => c.id === candidateId);
+        const candName = cand ? (candidateMockDetails[candidateId] ? candidateMockDetails[candidateId].name : cand.name) : "Candidate";
+
+        state.assignments[candidateId] = {
+          recruiter: recruiterName,
+          company: companyName,
+          timestamp: Date.now(),
+          isUrgent: false
+        };
+
+        if (!state.acknowledgedAssignments) state.acknowledgedAssignments = {};
+        state.acknowledgedAssignments[candidateId] = false;
+
+        const newRecEmail = recruiterNameMap[recruiterName] || "sarah.connor@recruiter.com";
+        addNotification("Recruiter", newRecEmail, "New Candidate Assigned", `Candidate ${candName} has been assigned to you for client ${companyName}.`, "info");
+        addAdminLog(`Assigned Candidate ${candName} (${candidateId}) to Recruiter ${recruiterName} for ${companyName}`, "info");
+      });
+
+      saveAssignments();
+      saveAcknowledgedAssignments();
+
+      alert(`Successfully assigned ${state.selectedSourcingCandidates.length} candidates to ${recruiterName} for ${companyName}!`);
+      
+      state.selectedSourcingCandidates = [];
+      if (headerCheckbox) headerCheckbox.checked = false;
+      if (sourcingSelectAllCheckbox) sourcingSelectAllCheckbox.checked = false;
+      
+      renderAdminCVSourced();
+    });
+  }
+
+  const bulkStatusBtn = document.getElementById("bulk-sourcing-status-btn");
+  if (bulkStatusBtn) {
+    bulkStatusBtn.addEventListener("click", () => {
+      const newStatus = document.getElementById("bulk-sourcing-status-select")?.value;
+      if (!newStatus) {
+        alert("Please select a status to update to.");
+        return;
+      }
+
+      state.selectedSourcingCandidates.forEach(candidateId => {
+        state.candidateStatuses[candidateId] = newStatus;
+      });
+
+      saveCandidateStatuses();
+
+      alert(`Successfully updated status for ${state.selectedSourcingCandidates.length} candidates to ${newStatus}!`);
+
+      state.selectedSourcingCandidates = [];
+      if (headerCheckbox) headerCheckbox.checked = false;
+      if (sourcingSelectAllCheckbox) sourcingSelectAllCheckbox.checked = false;
+
+      renderAdminCVSourced();
+    });
+  }
+
+  const bulkVettedBtn = document.getElementById("bulk-sourcing-vetted-btn");
+  if (bulkVettedBtn) {
+    bulkVettedBtn.addEventListener("click", () => {
+      let addedCount = 0;
+      state.selectedSourcingCandidates.forEach(candidateId => {
+        const exists = candidatesData.some(c => c.id === candidateId);
+        if (!exists) {
+          const extCand = (state.sourcedSearchResults || []).find(c => c.id === candidateId);
+          if (extCand) {
+            const newVettedCandidate = {
+              id: extCand.id,
+              role: extCand.role,
+              skills: extCand.skills || [],
+              experience: extCand.experience || 5,
+              hourlyRate: extCand.hourlyRate || 75,
+              annualSalary: extCand.annualSalary || 120000,
+              education: extCand.education || "B.S. in Computer Science",
+              availability: extCand.availability || "Immediate",
+              bio: extCand.bio || `Imported talent from ${extCand.source || 'API Integration'}. Specialist in ${extCand.role}.`,
+              matchRating: extCand.matchRating || 95,
+              source: extCand.source
+            };
+
+            candidatesData.push(newVettedCandidate);
+
+            candidateMockDetails[extCand.id] = {
+              name: extCand.name,
+              company: extCand.company || "N/A"
+            };
+
+            if (!state.candidateStatuses[extCand.id]) {
+              state.candidateStatuses[extCand.id] = "Sourced";
+            }
+            if (!state.statusTimelines[extCand.id] || state.statusTimelines[extCand.id].length === 0) {
+              state.statusTimelines[extCand.id] = seedTimelineForCandidate(extCand.id);
+            }
+            addedCount++;
+          }
+        }
+      });
+
+      if (addedCount > 0) {
+        saveImportedCandidates();
+        saveCandidateStatuses();
+        saveStatusTimelines();
+        addAdminLog(`Bulk imported ${addedCount} candidates into Talent Pool`, "success");
+      }
+
+      alert(`Successfully added ${state.selectedSourcingCandidates.length} candidates to the vetted talent pool!`);
+
+      state.selectedSourcingCandidates = [];
+      if (headerCheckbox) headerCheckbox.checked = false;
+      if (sourcingSelectAllCheckbox) sourcingSelectAllCheckbox.checked = false;
+
+      renderAdminCVSourced();
+    });
+  }
+
+  const bulkClearBtn = document.getElementById("bulk-sourcing-clear-btn");
+  if (bulkClearBtn) {
+    bulkClearBtn.addEventListener("click", () => {
+      state.selectedSourcingCandidates = [];
+      if (headerCheckbox) headerCheckbox.checked = false;
+      if (sourcingSelectAllCheckbox) sourcingSelectAllCheckbox.checked = false;
+      
+      const visibleCheckboxes = document.querySelectorAll(".sourcing-kanban-checkbox, .sourcing-table-checkbox");
+      visibleCheckboxes.forEach(chk => {
+        chk.checked = false;
+      });
+
+      updateSourcingBulkPanel();
+    });
+  }
+}
+
+function setupTalentPoolEventListeners() {
+  const headerCheckbox = document.getElementById("talent-header-checkbox");
+  if (headerCheckbox) {
+    headerCheckbox.addEventListener("change", () => {
+      const isChecked = headerCheckbox.checked;
+      const visibleCheckboxes = document.querySelectorAll(".talent-table-checkbox");
+      
+      visibleCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+        const id = chk.dataset.id;
+        if (isChecked) {
+          if (!state.selectedTalentCandidates.includes(id)) {
+            state.selectedTalentCandidates.push(id);
+          }
+        } else {
+          state.selectedTalentCandidates = state.selectedTalentCandidates.filter(item => item !== id);
+        }
+      });
+      updateTalentBulkPanel();
+    });
+  }
+
+  const talentSelectAllCheckbox = document.getElementById("talent-select-all-checkbox");
+  if (talentSelectAllCheckbox) {
+    talentSelectAllCheckbox.addEventListener("change", () => {
+      const isChecked = talentSelectAllCheckbox.checked;
+      const visibleCheckboxes = document.querySelectorAll(".talent-table-checkbox");
+      
+      visibleCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+        const id = chk.dataset.id;
+        if (isChecked) {
+          if (!state.selectedTalentCandidates.includes(id)) {
+            state.selectedTalentCandidates.push(id);
+          }
+        } else {
+          state.selectedTalentCandidates = state.selectedTalentCandidates.filter(item => item !== id);
+        }
+      });
+      updateTalentBulkPanel();
+    });
+  }
+
+  const bulkAssignBtn = document.getElementById("bulk-talent-assign-btn");
+  if (bulkAssignBtn) {
+    bulkAssignBtn.addEventListener("click", () => {
+      const recruiterName = document.getElementById("bulk-talent-recruiter-select")?.value;
+      const companyName = document.getElementById("bulk-talent-company-select")?.value;
+
+      if (!recruiterName || !companyName) {
+        alert("Please select both a recruiter and a client.");
+        return;
+      }
+
+      const recruiterNameMap = {
+        "Sarah Connor": "sarah.connor@recruiter.com",
+        "Michael Scott": "michael.scott@recruiter.com",
+        "Harvey Specter": "harvey.specter@recruiter.com",
+        "Jessica Pearson": "jessica.pearson@recruiter.com"
+      };
+
+      state.selectedTalentCandidates.forEach(candidateId => {
+        const cand = candidatesData.find(c => c.id === candidateId);
+        const candName = cand ? (candidateMockDetails[candidateId] ? candidateMockDetails[candidateId].name : cand.name) : "Candidate";
+
+        state.assignments[candidateId] = {
+          recruiter: recruiterName,
+          company: companyName,
+          timestamp: Date.now(),
+          isUrgent: false
+        };
+
+        if (!state.acknowledgedAssignments) state.acknowledgedAssignments = {};
+        state.acknowledgedAssignments[candidateId] = false;
+
+        const newRecEmail = recruiterNameMap[recruiterName] || "sarah.connor@recruiter.com";
+        addNotification("Recruiter", newRecEmail, "New Candidate Assigned", `Candidate ${candName} has been assigned to you for client ${companyName}.`, "info");
+        addAdminLog(`Assigned Candidate ${candName} (${candidateId}) to Recruiter ${recruiterName} for ${companyName}`, "info");
+      });
+
+      saveAssignments();
+      saveAcknowledgedAssignments();
+
+      alert(`Successfully assigned ${state.selectedTalentCandidates.length} candidates to ${recruiterName} for ${companyName}!`);
+      
+      state.selectedTalentCandidates = [];
+      if (headerCheckbox) headerCheckbox.checked = false;
+      if (talentSelectAllCheckbox) talentSelectAllCheckbox.checked = false;
+      
+      renderAdminTalentPool();
+      renderAdminDashboard();
+    });
+  }
+
+  const bulkClearBtn = document.getElementById("bulk-talent-clear-btn");
+  if (bulkClearBtn) {
+    bulkClearBtn.addEventListener("click", () => {
+      state.selectedTalentCandidates = [];
+      if (headerCheckbox) headerCheckbox.checked = false;
+      if (talentSelectAllCheckbox) talentSelectAllCheckbox.checked = false;
+      
+      const visibleCheckboxes = document.querySelectorAll(".talent-table-checkbox");
+      visibleCheckboxes.forEach(chk => {
+        chk.checked = false;
+      });
+
+      updateTalentBulkPanel();
+    });
+  }
+}
+
+function renderSourcingKanban() {
+  const searchVal = (elements.cvSourcedSearch?.value || "").toLowerCase().trim();
+  const filterStatus = elements.cvSourcedFilterStatus?.value || "all";
+  const sortBy = document.getElementById("cv-sourced-sort-by")?.value || "name-asc";
+
+  const externalList = (state.sourcedSearchResults || [])
+    .filter(cand => !candidatesData.some(c => c.id === cand.id))
+    .map(cand => {
+      return {
+        ...cand,
+        status: state.candidateStatuses[cand.id] || "Sourced"
+      };
+    });
+
+  let list = candidatesData.map(cand => {
+    const mock = candidateMockDetails[cand.id] || { name: `Candidate #${cand.id.replace('TB-', 'AIS-')}`, company: "N/A" };
+    const status = state.candidateStatuses[cand.id] || "Sourced";
+    return {
+      ...cand,
+      name: mock.name,
+      company: mock.company,
+      status: status,
+      isVetted: true
+    };
+  });
+
+  list = list.concat(externalList);
+
+  if (searchVal) {
+    list = list.filter(c => 
+      c.name.toLowerCase().includes(searchVal) ||
+      c.role.toLowerCase().includes(searchVal) ||
+      c.company.toLowerCase().includes(searchVal) ||
+      c.id.toLowerCase().includes(searchVal)
+    );
+  }
+
+  if (filterStatus !== "all") {
+    list = list.filter(c => c.status === filterStatus);
+  }
+
+  list.sort((a, b) => {
+    if (sortBy === "name-asc") {
+      return a.name.localeCompare(b.name);
+    } else if (sortBy === "name-desc") {
+      return b.name.localeCompare(a.name);
+    } else if (sortBy === "position-asc") {
+      return a.role.localeCompare(b.role);
+    } else if (sortBy === "experience-desc") {
+      return b.experience - a.experience;
+    }
+    return 0;
+  });
+
+  const columns = {
+    "Sourced": document.getElementById("sourcing-kanban-list-sourced"),
+    "Submitted": document.getElementById("sourcing-kanban-list-submitted"),
+    "Interviews": document.getElementById("sourcing-kanban-list-interviews"),
+    "Placed": document.getElementById("sourcing-kanban-list-placed"),
+    "Rejected": document.getElementById("sourcing-kanban-list-rejected")
+  };
+
+  const counts = {
+    "Sourced": document.getElementById("sourcing-kanban-count-sourced"),
+    "Submitted": document.getElementById("sourcing-kanban-count-submitted"),
+    "Interviews": document.getElementById("sourcing-kanban-count-interviews"),
+    "Placed": document.getElementById("sourcing-kanban-count-placed"),
+    "Rejected": document.getElementById("sourcing-kanban-count-rejected")
+  };
+
+  for (const key in columns) {
+    if (columns[key]) columns[key].innerHTML = "";
+    if (counts[key]) counts[key].textContent = "0";
+  }
+
+  const columnCounts = { "Sourced": 0, "Submitted": 0, "Interviews": 0, "Placed": 0, "Rejected": 0 };
+
+  list.forEach(c => {
+    let colKey = "Sourced";
+    if (c.status === "Submitted") {
+      colKey = "Submitted";
+    } else if (c.status.startsWith("L1") || c.status.startsWith("L2") || c.status.startsWith("L3")) {
+      colKey = "Interviews";
+    } else if (c.status === "Offered" || c.status === "Joined") {
+      colKey = "Placed";
+    } else if (c.status === "Rejected") {
+      colKey = "Rejected";
+    }
+
+    columnCounts[colKey]++;
+    const col = columns[colKey];
+    if (!col) return;
+
+    const assignment = state.assignments[c.id];
+    let assigneeText = "Unassigned";
+    let isUrgentText = "";
+    if (assignment) {
+      assigneeText = assignment.recruiter;
+      if (assignment.isUrgent) {
+        isUrgentText = `<span class="kanban-card-priority high" style="padding: 1px 4px; font-size: 0.6rem; border-radius: 2px; text-transform: uppercase;">Urgent</span>`;
+      }
+    }
+
+    const isChecked = state.selectedSourcingCandidates.includes(c.id);
+
+    const card = document.createElement("div");
+    card.className = "kanban-card";
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" class="table-row-checkbox sourcing-kanban-checkbox" data-id="${c.id}" ${isChecked ? 'checked' : ''}>
+          <span style="font-weight: 700; font-size: 0.78rem; color: var(--accent-indigo);">${c.id.replace('TB-', 'AIS-')}</span>
+        </div>
+        ${isUrgentText}
+      </div>
+      <div class="kanban-card-title">${c.name}</div>
+      <div class="kanban-card-subtitle" style="font-weight:600; color:var(--text-primary);">${c.role}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">${c.company}</div>
+      
+      <div style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 6px;">
+        <select class="form-input" style="margin-top:0; padding: 4px 8px; font-size: 0.78rem; width: 100%; height:30px; background: var(--bg-glass);" onchange="updateCVSourcedStatus('${c.id}', this.value)">
+          <option value="Sourced" ${c.status === "Sourced" ? 'selected' : ''}>Sourced</option>
+          <option value="Submitted" ${c.status === "Submitted" ? 'selected' : ''}>Submitted</option>
+          <option value="L1 Scheduled" ${c.status === "L1 Scheduled" ? 'selected' : ''}>L1 Scheduled</option>
+          <option value="L1 Select" ${c.status === "L1 Select" ? 'selected' : ''}>L1 Select</option>
+          <option value="L2 Scheduled" ${c.status === "L2 Scheduled" ? 'selected' : ''}>L2 Scheduled</option>
+          <option value="L2 Select" ${c.status === "L2 Select" ? 'selected' : ''}>L2 Select</option>
+          <option value="L3 Scheduled" ${c.status === "L3 Scheduled" ? 'selected' : ''}>L3 Scheduled</option>
+          <option value="L3 Select" ${c.status === "L3 Select" ? 'selected' : ''}>L3 Select</option>
+          <option value="Offered" ${c.status === "Offered" ? 'selected' : ''}>Offered</option>
+          <option value="Joined" ${c.status === "Joined" ? 'selected' : ''}>Joined</option>
+          <option value="Rejected" ${c.status === "Rejected" ? 'selected' : ''}>Rejected</option>
+        </select>
+      </div>
+
+      <div class="kanban-card-footer">
+        <div class="kanban-card-user" style="font-size: 0.72rem;">
+          <span style="font-weight:600; color:var(--text-secondary);">${assigneeText}</span>
+        </div>
+        <div class="kanban-card-actions">
+          <button type="button" class="kanban-card-action-btn" onclick="openAssignRecruiterModal('${c.id}')" title="Assign Recruiter">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          </button>
+        </div>
+      </div>
+    `;
+    col.appendChild(card);
+  });
+
+  for (const key in counts) {
+    if (counts[key]) counts[key].textContent = columnCounts[key].toString();
+  }
+
+  document.querySelectorAll(".sourcing-kanban-checkbox").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const id = chk.dataset.id;
+      if (chk.checked) {
+        if (!state.selectedSourcingCandidates.includes(id)) {
+          state.selectedSourcingCandidates.push(id);
+        }
+      } else {
+        state.selectedSourcingCandidates = state.selectedSourcingCandidates.filter(item => item !== id);
+      }
+      updateSourcingBulkPanel();
+    });
+  });
+
+  updateSourcingBulkPanel();
+}
 
 // Start operations on page load
 window.addEventListener("DOMContentLoaded", init);
